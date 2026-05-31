@@ -140,10 +140,10 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
 </div></div>
 <div class="ov" id="syncSetupOv"><div class="sheet">
   <div class="hdl"></div><h2 class="sh2">☁️ Set Up Cloud Sync</h2>
-  <div class="ibox ibl"><p><strong>One-time setup.</strong> All three devices (your iPhone, your wife's iPhone, desktop) will share the same live data. Any transaction added on any device appears on all others within seconds.</p><p style="margin-top:8px">Steps: <strong>1.</strong> Go to <a href="https://jsonbin.io" target="_blank" style="color:var(--Btx)">jsonbin.io</a> and create a free account. <strong>2.</strong> Go to API Keys and create a Master Key. <strong>3.</strong> Paste it below. <strong>4.</strong> Tap Connect — the app creates your private data bin automatically. <strong>5.</strong> Share this same API key with your wife and anyone else who needs access — they enter it on their device and all data syncs.</p></div>
-  <div class="fg"><label class="fl">JSONBin API Key</label><input class="fi" type="text" id="apiKeyInput" placeholder="$2a$10$..."></div>
-  <div class="fg" id="existingBinGroup" style="display:none"><label class="fl">Bin ID (if already set up on another device)</label><input class="fi" type="text" id="binIdInput" placeholder="Leave blank to create new"></div>
-  <button class="btn bp" style="width:100%;margin-top:4px" onclick="toggleBinField()">Already set up on another device? Enter Bin ID</button>
+  <div class="ibox ibl"><p><strong>Uses your existing GitHub account</strong> — no new accounts needed. Creates a private Gist in your GitHub to store the data. All three devices share the same live data automatically.</p></div>
+  <div class="fg"><label class="fl">GitHub Personal Access Token</label><input class="fi" type="text" id="apiKeyInput" placeholder="ghp_..."></div>
+  <div class="fg" id="existingBinGroup" style="display:none"><label class="fl">Gist ID (if already set up on another device)</label><input class="fi" type="text" id="binIdInput" placeholder="Leave blank to create new"></div>
+  <button class="btn bp" style="width:100%;margin-top:4px" onclick="toggleBinField()">Already set up on another device? Enter Gist ID</button>
   <div class="brow" style="margin-top:12px"><button class="btn bs" onclick="closeOv('syncSetupOv')">Cancel</button><button class="btn bp" onclick="doSyncSetup()">Connect</button></div>
 </div></div>
 
@@ -184,8 +184,7 @@ const SAVINGS=[
 
 const SEED={"periods":{}};
 
-// ── CLOUD SYNC ──
-const JSONBIN_BASE='https://api.jsonbin.io/v3';
+// ── CLOUD SYNC via GitHub Gist ──
 let syncState='no';
 let syncTimer=null;
 let isSyncing=false;
@@ -197,7 +196,6 @@ function getSyncCfg(){
 function setSyncCfg(c){localStorage.setItem(SK+'_sync',JSON.stringify(c));}
 
 function hashData(d){
-  // Simple hash to detect changes - count transactions and sum amounts
   let count=0,sum=0;
   Object.values(d.periods||{}).forEach(p=>(p.transactions||[]).forEach(t=>{count++;sum+=t.amount||0;}));
   return count+'_'+sum.toFixed(2);
@@ -205,48 +203,43 @@ function hashData(d){
 
 async function cloudGet(){
   const cfg=getSyncCfg();
-  if(!cfg.apiKey||!cfg.binId)return null;
+  if(!cfg.token||!cfg.gistId)return null;
   try{
-    const r=await fetch(JSONBIN_BASE+'/b/'+cfg.binId+'/latest',{
-      headers:{'X-Master-Key':cfg.apiKey,'X-Bin-Meta':'false'}
+    const r=await fetch('https://api.github.com/gists/'+cfg.gistId,{
+      headers:{'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json'}
     });
-    if(!r.ok){console.log('cloudGet failed:',r.status,r.statusText);return null;}
+    if(!r.ok)return null;
     const j=await r.json();
-    // JSONBin wraps in {record:{...}} or returns raw - handle both
-    if(j&&j.record&&j.record.periods)return j.record;
-    if(j&&j.periods)return j;
-    console.log('cloudGet unexpected format:',JSON.stringify(j).slice(0,100));
-    return null;
-  }catch(e){console.log('cloudGet error:',e.message);return null;}
+    const content=j.files?.['budget.json']?.content;
+    if(!content)return null;
+    return JSON.parse(content);
+  }catch(e){return null;}
 }
 
 async function cloudPut(data){
   const cfg=getSyncCfg();
-  if(!cfg.apiKey||!cfg.binId)return false;
+  if(!cfg.token||!cfg.gistId)return false;
   try{
-    const r=await fetch(JSONBIN_BASE+'/b/'+cfg.binId,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json','X-Master-Key':cfg.apiKey},
-      body:JSON.stringify(data)
+    const r=await fetch('https://api.github.com/gists/'+cfg.gistId,{
+      method:'PATCH',
+      headers:{'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({files:{'budget.json':{content:JSON.stringify(data)}}})
     });
-    if(!r.ok)console.log('cloudPut failed:',r.status,r.statusText);
     return r.ok;
-  }catch(e){console.log('cloudPut error:',e.message);return false;}
+  }catch(e){return false;}
 }
 
-async function cloudCreateBin(apiKey){
-  const initial={periods:{},_v:1,_created:Date.now()};
+async function cloudCreateGist(token){
   try{
-    const r=await fetch(JSONBIN_BASE+'/b',{
+    const r=await fetch('https://api.github.com/gists',{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Name':'FamilyBudget','X-Bin-Private':'false'},
-      body:JSON.stringify(initial)
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({description:'Family Budget Data',public:false,files:{'budget.json':{content:JSON.stringify({periods:{}})}}})
     });
-    if(!r.ok){console.log('createBin failed:',r.status,await r.text());return null;}
+    if(!r.ok)return null;
     const j=await r.json();
-    console.log('createBin response:',JSON.stringify(j).slice(0,200));
-    return j.metadata?.id||j.id||null;
-  }catch(e){console.log('createBin error:',e.message);return null;}
+    return j.id||null;
+  }catch(e){return null;}
 }
 
 function mergeData(local,cloud){
@@ -269,7 +262,7 @@ function mergeData(local,cloud){
 async function syncNow(push){
   if(isSyncing)return;
   const cfg=getSyncCfg();
-  if(!cfg.apiKey||!cfg.binId){setSyncStatus('no');return;}
+  if(!cfg.token||!cfg.gistId){setSyncStatus('no');return;}
   isSyncing=true;
   setSyncStatus('ing');
   try{
@@ -279,7 +272,6 @@ async function syncNow(push){
     if(cloud&&cloud.periods){
       toSave=mergeData(local,cloud);
     }
-    // Always push merged result so all devices stay in sync
     const ok=await cloudPut(toSave);
     if(!ok){setSyncStatus('off');isSyncing=false;return;}
     const newHash=hashData(toSave);
@@ -288,10 +280,7 @@ async function syncNow(push){
     localStorage.setItem(SK,JSON.stringify(toSave));
     setSyncStatus('ok');
     if(changed)render();
-  }catch(e){
-    console.log('syncNow error:',e.message);
-    setSyncStatus('off');
-  }
+  }catch(e){setSyncStatus('off');}
   isSyncing=false;
 }
 
@@ -310,23 +299,23 @@ function setSyncStatus(s){
 }
 
 async function doSyncSetup(){
-  const apiKey=document.getElementById('apiKeyInput').value.trim();
-  const binIdEntered=document.getElementById('binIdInput').value.trim();
-  if(!apiKey){alert('Please enter your API key');return;}
+  const token=document.getElementById('apiKeyInput').value.trim();
+  const gistIdEntered=document.getElementById('binIdInput').value.trim();
+  if(!token){alert('Please enter your GitHub token');return;}
   setSyncStatus('ing');
-  let binId=binIdEntered;
-  if(!binId){
-    binId=await cloudCreateBin(apiKey);
-    if(!binId){
-      alert('Could not connect to JSONBin.\n\nCheck:\n1. Your API key is copied correctly (starts with $2a$10$)\n2. You are connected to the internet\n3. Try again');
+  let gistId=gistIdEntered;
+  if(!gistId){
+    gistId=await cloudCreateGist(token);
+    if(!gistId){
+      alert('Could not connect to GitHub.\n\nCheck your token is copied correctly and try again.');
       setSyncStatus('off');
       return;
     }
   }
-  setSyncCfg({apiKey,binId});
+  setSyncCfg({token,gistId});
   closeOv('syncSetupOv');
   await syncNow(true);
-  alert('Cloud sync connected!\n\nBin ID: '+binId+'\n\nSave this Bin ID — share it with your wife along with the API key so her phone connects to the same data.');
+  alert('Cloud sync connected!\n\nGist ID: '+gistId+'\n\nSave this Gist ID — share it with your wife along with the token so her phone connects to the same data.');
   render();
 }
 
@@ -469,7 +458,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">${pts.length===0?'<p style="font-size:13px;color:var(--tx3)">No data yet</p>':pts.map(p=>{const cs=p.sp>p.bgt?'cov':p.sp>p.bgt*.85?'cwn':'cok';return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--br);font-size:13px"><span style="color:var(--tx2)">${getPL(p.idx)}</span><span class="chip ${cs}">${fm(p.sp)} <span style="font-weight:400;opacity:.7">of ${fm(p.bgt)}</span></span></div>`;}).join('')}</div>
     </div>`;
   }else if(tab==='settings'){
-    const syncLabel=syncConfigured?`Connected (Bin: ${cfg.binId.slice(-8)})`:'Not set up';
+    const syncLabel=syncConfigured?cfg.gistId?`Connected (Gist: ${cfg.gistId.slice(-8)})`:`Connected`:'Not set up';
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
@@ -477,8 +466,10 @@ function render(){
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
-      ${syncConfigured?`<button class="bw" style="margin-bottom:6px" onclick="syncNow(false).then(render)">↻ Sync now</button>`:''}
-      <button class="bw" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bin ID: ${cfg.binId||'none'}</div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
@@ -540,20 +531,18 @@ function render(){
     </div>
 
     <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
-      <h3 style="color:var(--Btx);margin-bottom:10px">☁️ Step 3 — Set Up Cloud Sync (JSONBin)</h3>
-      <p style="font-size:13px;color:var(--Btx);margin-bottom:10px;line-height:1.6">This makes all three devices share the same data in real time. Do this once — <strong>one person sets it up, then shares the details with the others</strong>.</p>
+      <h3 style="color:var(--Btx);margin-bottom:10px">☁️ Step 3 — Set Up Cloud Sync (GitHub)</h3>
+      <p style="font-size:13px;color:var(--Btx);margin-bottom:10px;line-height:1.6">Uses your existing GitHub account — no new accounts needed. Creates a private Gist to store your data. One person sets it up and shares the details with the others.</p>
       <ol style="list-style:none;padding:0">
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>Go to <strong>jsonbin.io</strong> in your browser and click <strong>Sign Up Free</strong>. Use any email address.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>After signing in, look at the <strong>left sidebar</strong>. Click <strong>API Keys</strong>.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>Click <strong>+ Create API Key</strong>. Name it anything (e.g. "Budget"). Make sure <strong>Master Key</strong> is selected. Click <strong>Create</strong>.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>You'll see a long code starting with <strong>$2a$10$</strong>. This is your API key. <strong>Copy it and save it somewhere safe</strong> (e.g. in your iPhone Notes app) — you'll need it on all three devices.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">5</span><span>Open the Budget app on your phone. Tap <strong>Settings</strong> → <strong>Set up cloud sync</strong>. Paste your API key into the box. Tap <strong>Connect</strong>. The app creates your data bin automatically and shows you a <strong>Bin ID</strong> — a short code like <strong>6841abc123</strong>.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">6</span><span><strong>Note down both the API key and the Bin ID</strong>. Send them to your wife (e.g. via iMessage). She opens the Budget app on her phone → Settings → Set up cloud sync → pastes the API key → taps <strong>"Already set up on another device? Enter Bin ID"</strong> → pastes the Bin ID → taps Connect.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">7</span><span>Repeat on your desktop browser: open your GitHub URL, go to Settings → Set up cloud sync, enter the same API key and Bin ID. All three devices now share one live dataset. The small dot in the top-right corner of the app shows: 🟢 Synced · 🟡 Syncing · 🔴 Offline.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>Go to <strong>github.com</strong> and log in with your existing account (demitrivoulgaropoulos-byte).</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>Click your <strong>profile picture</strong> in the top-right corner → click <strong>Settings</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>Scroll all the way down the left sidebar and click <strong>Developer settings</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>Click <strong>Personal access tokens</strong> → <strong>Tokens (classic)</strong> → <strong>Generate new token</strong> → <strong>Generate new token (classic)</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">5</span><span>In the <strong>Note</strong> field type <strong>Budget Sync</strong>. Set <strong>Expiration</strong> to <strong>No expiration</strong>. Scroll down and tick the box next to <strong>gist</strong>. Scroll to the bottom and click <strong>Generate token</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">6</span><span>A token appears starting with <strong>ghp_</strong>. <strong>Copy it immediately and save it in your iPhone Notes</strong> — GitHub only shows it once. You need this on all three devices.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">7</span><span>Open the Budget app → <strong>Settings</strong> → <strong>Set up cloud sync</strong>. Paste your token. Tap <strong>Connect</strong>. It creates a Gist and shows you a <strong>Gist ID</strong>. Save that too.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">8</span><span>On your wife's phone and the desktop: Settings → Set up cloud sync → paste token → tap <strong>"Already set up on another device? Enter Gist ID"</strong> → paste Gist ID → Connect. All devices now sync in real time.</span></li>
       </ol>
-      <div style="background:rgba(255,255,255,0.3);border-radius:var(--rs);padding:10px;margin-top:8px">
-        <p style="font-size:13px;color:var(--Btx)"><strong>Free tier limits:</strong> JSONBin allows 10,000 API requests per month. At roughly 10 transactions per day across all devices, that's about 600/month — well within the free limit. You will never need to pay.</p>
-      </div>
     </div>
 
     <div class="isec"><h3>➕ Adding expenses day to day</h3><p>Tap the <strong>+</strong> button any time you spend money. Pick the category, enter the amount, add a description if you want. The transaction saves instantly and pushes to all other devices within 2 seconds. Tap any square on the Snapshot tab to see all transactions for that category and delete mistakes.</p></div>
@@ -578,7 +567,7 @@ function render(){
     </div>
     </div>`;
   }else if(tab==='settings'){
-    const syncLabel=syncConfigured?`Connected (Bin: ${cfg.binId.slice(-8)})`:'Not set up';
+    const syncLabel=syncConfigured?cfg.gistId?`Connected (Gist: ${cfg.gistId.slice(-8)})`:`Connected`:'Not set up';
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
@@ -586,8 +575,10 @@ function render(){
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
-      ${syncConfigured?`<button class="bw" style="margin-bottom:6px" onclick="syncNow(false).then(render)">↻ Sync now</button>`:''}
-      <button class="bw" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bin ID: ${cfg.binId||'none'}</div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
@@ -614,12 +605,12 @@ function render(){
     </div>
     <div class="isec" style="background:var(--Gbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:20px">
       <h3 style="color:var(--Gtx);margin-bottom:8px">☁️ Cloud Sync — How It Works</h3>
-      <p style="font-size:14px;color:var(--Gtx);line-height:1.7;margin-bottom:6px">Uses <strong>JSONBin.io</strong> — a free, secure online JSON storage service. Your data is stored in a private bin that only people with your API key can access.</p>
+      <p style="font-size:14px;color:var(--Gtx);line-height:1.7;margin-bottom:6px">Uses <strong>GitHub Gist</strong> — stored directly in your own GitHub account. No third-party services, no limits, completely free forever.</p>
       <ul style="padding-left:18px">
         <li style="font-size:14px;color:var(--Gtx);margin-bottom:4px">Any transaction added on any device syncs to all others within 2 seconds</li>
         <li style="font-size:14px;color:var(--Gtx);margin-bottom:4px">Monthly statement imports also sync automatically</li>
         <li style="font-size:14px;color:var(--Gtx);margin-bottom:4px">Works offline — syncs when you reconnect</li>
-        <li style="font-size:14px;color:var(--Gtx)">Free tier: up to 10,000 requests/month — more than enough for daily use</li>
+        <li style="font-size:14px;color:var(--Gtx)">Data is private and owned by you — only people with your token can access it</li>
       </ul>
     </div>
     <div class="isec"><h3>➕ Adding expenses</h3><p>Tap <strong>+</strong> any time you spend. Pick category, enter amount. All devices see it within seconds once synced.</p></div>
@@ -758,6 +749,30 @@ function confirmReset(){
 }
 
 document.addEventListener('click',e=>{document.querySelectorAll('.ov').forEach(o=>{if(e.target===o)o.classList.remove('open');});});
+
+async function manualSync(){
+  setSyncStatus('ing');
+  await syncNow(true);
+  render();
+  alert(syncState==='ok'?'✅ Sync successful! All devices are up to date.':'❌ Sync failed. Check your internet connection and try again.');
+}
+
+async function fixSync(){
+  if(!confirm('This will create a brand new Gist and reconnect all devices.\n\nYou will need to re-enter the new Gist ID on your wife\'s phone afterwards.\n\nContinue?'))return;
+  const cfg=getSyncCfg();
+  if(!cfg.token){alert('No GitHub token found. Please use Set up cloud sync first.');return;}
+  setSyncStatus('ing');render();
+  try{
+    const local=loadRaw();
+    const gistId=await cloudCreateGist(cfg.token);
+    if(!gistId){alert('Failed to create Gist. Check your token and internet connection.');setSyncStatus('off');return;}
+    await cloudPut(local);
+    setSyncCfg({token:cfg.token,gistId});
+    setSyncStatus('ok');render();
+    alert('✅ New Gist created!\n\nGist ID: '+gistId+'\n\n--- NEXT STEPS ---\nOn your wife\'s iPhone:\n1. Open Budget app\n2. Settings → Set up cloud sync\n3. Enter the same GitHub token\n4. Tap "Already set up on another device"\n5. Enter this Gist ID: '+gistId+'\n6. Tap Connect\n\nSave this Gist ID somewhere safe.');
+  }catch(e){alert('Error: '+e.message);setSyncStatus('off');}
+  render();
+}
 
 window.onload=async function(){
   render();
