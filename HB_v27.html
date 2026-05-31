@@ -186,54 +186,78 @@ const SEED={"periods":{}};
 
 // ── CLOUD SYNC ──
 const JSONBIN_BASE='https://api.jsonbin.io/v3';
-let syncState='no'; // no|ok|ing|off
+let syncState='no';
 let syncTimer=null;
 let isSyncing=false;
+let lastSyncedHash='';
 
 function getSyncCfg(){
   try{return JSON.parse(localStorage.getItem(SK+'_sync'))||{};}catch(e){return{};}
 }
 function setSyncCfg(c){localStorage.setItem(SK+'_sync',JSON.stringify(c));}
 
+function hashData(d){
+  // Simple hash to detect changes - count transactions and sum amounts
+  let count=0,sum=0;
+  Object.values(d.periods||{}).forEach(p=>(p.transactions||[]).forEach(t=>{count++;sum+=t.amount||0;}));
+  return count+'_'+sum.toFixed(2);
+}
+
 async function cloudGet(){
   const cfg=getSyncCfg();
   if(!cfg.apiKey||!cfg.binId)return null;
   try{
-    const r=await fetch(`${JSONBIN_BASE}/b/${cfg.binId}/latest`,{headers:{'X-Master-Key':cfg.apiKey,'X-Bin-Meta':false}});
-    if(!r.ok)return null;
-    return await r.json();
-  }catch(e){return null;}
+    const r=await fetch(JSONBIN_BASE+'/b/'+cfg.binId+'/latest',{
+      headers:{'X-Master-Key':cfg.apiKey,'X-Bin-Meta':'false'}
+    });
+    if(!r.ok){console.log('cloudGet failed:',r.status,r.statusText);return null;}
+    const j=await r.json();
+    // JSONBin wraps in {record:{...}} or returns raw - handle both
+    if(j&&j.record&&j.record.periods)return j.record;
+    if(j&&j.periods)return j;
+    console.log('cloudGet unexpected format:',JSON.stringify(j).slice(0,100));
+    return null;
+  }catch(e){console.log('cloudGet error:',e.message);return null;}
 }
 
 async function cloudPut(data){
   const cfg=getSyncCfg();
   if(!cfg.apiKey||!cfg.binId)return false;
   try{
-    const r=await fetch(`${JSONBIN_BASE}/b/${cfg.binId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':cfg.apiKey},body:JSON.stringify(data)});
+    const r=await fetch(JSONBIN_BASE+'/b/'+cfg.binId,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':cfg.apiKey},
+      body:JSON.stringify(data)
+    });
+    if(!r.ok)console.log('cloudPut failed:',r.status,r.statusText);
     return r.ok;
-  }catch(e){return false;}
+  }catch(e){console.log('cloudPut error:',e.message);return false;}
 }
 
 async function cloudCreateBin(apiKey){
-  const initial={periods:{},_created:Date.now()};
+  const initial={periods:{},_v:1,_created:Date.now()};
   try{
-    const r=await fetch(`${JSONBIN_BASE}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Name':'FamilyBudget'},body:JSON.stringify(initial)});
-    if(!r.ok)return null;
+    const r=await fetch(JSONBIN_BASE+'/b',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Name':'FamilyBudget','X-Bin-Private':'false'},
+      body:JSON.stringify(initial)
+    });
+    if(!r.ok){console.log('createBin failed:',r.status,await r.text());return null;}
     const j=await r.json();
-    return j.metadata?.id||null;
-  }catch(e){return null;}
+    console.log('createBin response:',JSON.stringify(j).slice(0,200));
+    return j.metadata?.id||j.id||null;
+  }catch(e){console.log('createBin error:',e.message);return null;}
 }
 
 function mergeData(local,cloud){
-  // Union of all transactions by id; deleted items stay deleted
   const merged={periods:{}};
-  const allPeriods=new Set([...Object.keys(local.periods||{}),...Object.keys(cloud.periods||{})]);
-  allPeriods.forEach(pk=>{
-    const lTxs=(local.periods[pk]?.transactions||[]);
-    const cTxs=(cloud.periods[pk]?.transactions||[]);
+  const allPk=new Set([...Object.keys(local.periods||{}),...Object.keys(cloud.periods||{})]);
+  allPk.forEach(pk=>{
+    const lTx=(local.periods[pk]?.transactions||[]);
+    const cTx=(cloud.periods[pk]?.transactions||[]);
     const byId={};
-    lTxs.forEach(t=>{byId[t.id]=t;});
-    cTxs.forEach(t=>{
+    lTx.forEach(t=>{byId[t.id]=t;});
+    cTx.forEach(t=>{
       if(!byId[t.id]||(t._ts||0)>(byId[t.id]._ts||0))byId[t.id]=t;
     });
     const txs=Object.values(byId).filter(t=>!t._deleted);
@@ -242,7 +266,7 @@ function mergeData(local,cloud){
   return merged;
 }
 
-async function syncNow(pushData){
+async function syncNow(push){
   if(isSyncing)return;
   const cfg=getSyncCfg();
   if(!cfg.apiKey||!cfg.binId){setSyncStatus('no');return;}
@@ -251,27 +275,29 @@ async function syncNow(pushData){
   try{
     const cloud=await cloudGet();
     const local=loadRaw();
-    let final;
+    let toSave=local;
     if(cloud&&cloud.periods){
-      final=mergeData(local,cloud);
-    }else{
-      final=local;
+      toSave=mergeData(local,cloud);
     }
-    if(pushData||!cloud){
-      const ok=await cloudPut(final);
-      if(!ok){setSyncStatus('off');isSyncing=false;return;}
-    }
-    // Save merged back to local
-    localStorage.setItem(SK,JSON.stringify(final));
+    // Always push merged result so all devices stay in sync
+    const ok=await cloudPut(toSave);
+    if(!ok){setSyncStatus('off');isSyncing=false;return;}
+    const newHash=hashData(toSave);
+    const changed=newHash!==lastSyncedHash;
+    lastSyncedHash=newHash;
+    localStorage.setItem(SK,JSON.stringify(toSave));
     setSyncStatus('ok');
-    render();
-  }catch(e){setSyncStatus('off');}
-  finally{isSyncing=false;}
+    if(changed)render();
+  }catch(e){
+    console.log('syncNow error:',e.message);
+    setSyncStatus('off');
+  }
+  isSyncing=false;
 }
 
 function schedulePush(){
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>syncNow(true),800);
+  syncTimer=setTimeout(()=>syncNow(true),500);
 }
 
 function setSyncStatus(s){
@@ -280,7 +306,7 @@ function setSyncStatus(s){
   if(!el)return;
   const labels={no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'};
   el.className='sync-dot sync-'+s;
-  el.innerHTML=`<span class="dot"></span>${labels[s]||s}`;
+  el.innerHTML='<span class="dot"></span>'+(labels[s]||s);
 }
 
 async function doSyncSetup(){
@@ -291,12 +317,16 @@ async function doSyncSetup(){
   let binId=binIdEntered;
   if(!binId){
     binId=await cloudCreateBin(apiKey);
-    if(!binId){alert('Could not connect to JSONBin. Check your API key and try again.');setSyncStatus('off');return;}
+    if(!binId){
+      alert('Could not connect to JSONBin.\n\nCheck:\n1. Your API key is copied correctly (starts with $2a$10$)\n2. You are connected to the internet\n3. Try again');
+      setSyncStatus('off');
+      return;
+    }
   }
   setSyncCfg({apiKey,binId});
   closeOv('syncSetupOv');
   await syncNow(true);
-  alert(`✅ Cloud sync connected!\n\nYour Bin ID is: ${binId}\n\nShare your API key and this Bin ID with anyone else who needs access (Settings → Cloud Sync Setup).`);
+  alert('Cloud sync connected!\n\nBin ID: '+binId+'\n\nSave this Bin ID — share it with your wife along with the API key so her phone connects to the same data.');
   render();
 }
 
@@ -734,25 +764,8 @@ window.onload=async function(){
   // Initial sync on load
   await syncNow(false);
   render();
-  // Poll for changes from other devices every 30 seconds
-  setInterval(async function(){
-    const cfg=getSyncCfg();
-    if(!cfg.apiKey||!cfg.binId)return;
-    const cloud=await cloudGet();
-    if(!cloud||!cloud.periods)return;
-    const local=loadRaw();
-    // Count total transactions in each to detect if cloud has more
-    const countTx=d=>Object.values(d.periods||{}).reduce((s,p)=>s+(p.transactions||[]).length,0);
-    const localCount=countTx(local);
-    const cloudCount=countTx(cloud);
-    if(cloudCount!==localCount){
-      // Cloud has different data — merge and re-render
-      const merged=mergeData(local,cloud);
-      localStorage.setItem(SK,JSON.stringify(merged));
-      setSyncStatus('ok');
-      render();
-    }
-  }, 30000);
+  // Poll every 15 seconds — pull latest from cloud, merge, push back
+  setInterval(()=>syncNow(true), 15000);
 };
 </script>
 </body>
