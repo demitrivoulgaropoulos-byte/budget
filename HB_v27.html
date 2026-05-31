@@ -219,14 +219,21 @@ async function cloudGet(){
 async function cloudPut(data){
   const cfg=getSyncCfg();
   if(!cfg.token||!cfg.gistId)return false;
-  try{
-    const r=await fetch('https://api.github.com/gists/'+cfg.gistId,{
-      method:'PATCH',
-      headers:{'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
-      body:JSON.stringify({files:{'budget.json':{content:JSON.stringify(data)}}})
-    });
-    return r.ok;
-  }catch(e){return false;}
+  const body=JSON.stringify({files:{'budget.json':{content:JSON.stringify(data)}}});
+  const headers={'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'};
+  // Try up to 3 times - GitHub Gist returns 409 if requests come too close together
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      if(attempt>0)await new Promise(r=>setTimeout(r,1500*attempt));
+      const r=await fetch('https://api.github.com/gists/'+cfg.gistId,{method:'PATCH',headers,body});
+      if(r.ok)return true;
+      if(r.status===409){continue;} // conflict - retry
+      return false;
+    }catch(e){
+      if(attempt===2)return false;
+    }
+  }
+  return false;
 }
 
 async function cloudCreateGist(token){
@@ -286,7 +293,7 @@ async function syncNow(push){
 
 function schedulePush(){
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>syncNow(true),500);
+  syncTimer=setTimeout(()=>syncNow(true),2000);
 }
 
 function setSyncStatus(s){
