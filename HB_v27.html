@@ -796,8 +796,27 @@ window.onload=async function(){
   // Initial sync on load
   await syncNow(false);
   render();
-  // Poll every 15 seconds — pull latest from cloud, merge, push back
-  setInterval(()=>syncNow(true), 15000);
+  // Pull-only every 30 seconds — reads cloud and merges if different, no write
+  setInterval(async()=>{
+    const cfg=getSyncCfg();
+    if(!cfg.token||!cfg.gistId)return;
+    if(isSyncing)return;
+    try{
+      const cloud=await cloudGet();
+      if(!cloud||!cloud.periods)return;
+      const local=loadRaw();
+      const merged=mergeData(local,cloud);
+      const newHash=hashData(merged);
+      if(newHash!==lastSyncedHash){
+        lastSyncedHash=newHash;
+        localStorage.setItem(SK,JSON.stringify(merged));
+        setSyncStatus('ok');
+        render();
+      }
+    }catch(e){}
+  }, 30000);
+  // Full push every 3 minutes
+  setInterval(()=>syncNow(true), 180000);
 };
 </script>
 </body>
