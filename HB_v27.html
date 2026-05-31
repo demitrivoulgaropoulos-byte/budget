@@ -349,8 +349,18 @@ function carry(data,pk,id){
 }
 function avail(data,pk,id){return fb(id)+carry(data,pk,id)-ps(data,pk,id);}
 function totalSpentAll(data,id){return Object.values(data.periods||{}).reduce((s,p)=>s+((p.transactions||[]).filter(t=>t.catId===id).reduce((a,t)=>a+t.amount,0)),0);}
-function totalBudgetAll(id){const w=(new Date()-TS)/6048e5;return Math.round(fb(id)/2*w);}
-function cumSav(weekly){return Math.round(weekly*(new Date()-TS)/6048e5);}
+function totalBudgetAll(id){
+  // Only count fully completed fortnights, not a continuous fraction
+  const diffDays=Math.floor((new Date()-TS)/864e5);
+  const completedFns=Math.floor(diffDays/14);
+  return completedFns*fb(id);
+}
+function cumSav(weekly){
+  // Only count fully completed fortnights
+  const diffDays=Math.floor((new Date()-TS)/864e5);
+  const completedFns=Math.floor(diffDays/14);
+  return completedFns*weekly*2;
+}
 function fm(n){return'$'+Math.abs(Math.round(n)).toLocaleString('en-AU');}
 function fm2(n){return'$'+Math.abs(n).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtDate(iso){if(!iso||iso.length<10)return iso||'';const[y,m,d]=iso.split('-');return d+'/'+m+'/'+y;}
