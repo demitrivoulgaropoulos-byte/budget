@@ -271,7 +271,7 @@ async function syncNow(pushData){
 
 function schedulePush(){
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>syncNow(true),1500);
+  syncTimer=setTimeout(()=>syncNow(true),800);
 }
 
 function setSyncStatus(s){
@@ -734,6 +734,25 @@ window.onload=async function(){
   // Initial sync on load
   await syncNow(false);
   render();
+  // Poll for changes from other devices every 30 seconds
+  setInterval(async function(){
+    const cfg=getSyncCfg();
+    if(!cfg.apiKey||!cfg.binId)return;
+    const cloud=await cloudGet();
+    if(!cloud||!cloud.periods)return;
+    const local=loadRaw();
+    // Count total transactions in each to detect if cloud has more
+    const countTx=d=>Object.values(d.periods||{}).reduce((s,p)=>s+(p.transactions||[]).length,0);
+    const localCount=countTx(local);
+    const cloudCount=countTx(cloud);
+    if(cloudCount!==localCount){
+      // Cloud has different data — merge and re-render
+      const merged=mergeData(local,cloud);
+      localStorage.setItem(SK,JSON.stringify(merged));
+      setSyncStatus('ok');
+      render();
+    }
+  }, 30000);
 };
 </script>
 </body>
