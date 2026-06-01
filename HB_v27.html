@@ -270,27 +270,38 @@ function mergeData(local,cloud){
   return merged;
 }
 
-async function syncNow(push){
+async function syncNow(pullAndMerge){
+  // pullAndMerge=true: pull from cloud, merge, save locally (used on page load only)
+  // pullAndMerge=false: just push local state to cloud
   if(isSyncing)return;
   const cfg=getSyncCfg();
   if(!cfg.token||!cfg.gistId){setSyncStatus('no');return;}
   isSyncing=true;
   setSyncStatus('ing');
   try{
-    const cloud=await cloudGet();
-    const local=loadRaw();
-    let toSave=local;
-    if(cloud&&cloud.periods){
-      toSave=mergeData(local,cloud);
+    if(pullAndMerge===false){
+      // Pull, merge, save — used on initial page load
+      const cloud=await cloudGet();
+      const local=loadRaw();
+      let toSave=local;
+      if(cloud&&cloud.periods){
+        toSave=mergeData(local,cloud);
+      }
+      const ok=await cloudPut(toSave);
+      if(!ok){setSyncStatus('off');isSyncing=false;return;}
+      const newHash=hashData(toSave);
+      const changed=newHash!==lastSyncedHash;
+      lastSyncedHash=newHash;
+      localStorage.setItem(SK,JSON.stringify(toSave));
+      setSyncStatus('ok');
+      if(changed)render();
+    } else {
+      // Push only — local is source of truth, just broadcast to cloud
+      const local=loadRaw();
+      const ok=await cloudPut(local);
+      setSyncStatus(ok?'ok':'off');
+      lastSyncedHash=hashData(local);
     }
-    const ok=await cloudPut(toSave);
-    if(!ok){setSyncStatus('off');isSyncing=false;return;}
-    const newHash=hashData(toSave);
-    const changed=newHash!==lastSyncedHash;
-    lastSyncedHash=newHash;
-    localStorage.setItem(SK,JSON.stringify(toSave));
-    setSyncStatus('ok');
-    if(changed)render();
   }catch(e){setSyncStatus('off');}
   isSyncing=false;
 }
@@ -720,9 +731,8 @@ function delTx(pk,id){
     );
   }
   saveLocal(data);
-  // Push immediately to cloud so merge can't restore the deleted item
   clearTimeout(syncTimer);
-  cloudPut(data).then(ok=>{if(ok)setSyncStatus('ok');else setSyncStatus('off');});
+  cloudPut(data);
   closeOv('catOv');render();
 }
 
@@ -737,9 +747,8 @@ function histDelTx(pk,id,e){
     );
   }
   saveLocal(data);
-  // Push immediately to cloud so merge can't restore the deleted item
   clearTimeout(syncTimer);
-  cloudPut(data).then(ok=>{if(ok)setSyncStatus('ok');else setSyncStatus('off');});
+  cloudPut(data);
   render();
 }
 function openRetroAdd(pk,e){
@@ -802,32 +811,23 @@ async function fixSync(){
 }
 
 window.onload=async function(){
+  // On load: pull from cloud once and merge, then local is source of truth
   render();
-  // Initial sync on load
   await syncNow(false);
   render();
-  // Pull-only every 30 seconds — reads cloud and merges if different, no write
-  setInterval(async()=>{
-    const cfg=getSyncCfg();
-    if(!cfg.token||!cfg.gistId)return;
-    if(isSyncing)return;
-    try{
-      const cloud=await cloudGet();
-      if(!cloud||!cloud.periods)return;
-      const local=loadRaw();
-      const merged=mergeData(local,cloud);
-      const newHash=hashData(merged);
-      if(newHash!==lastSyncedHash){
-        lastSyncedHash=newHash;
-        localStorage.setItem(SK,JSON.stringify(merged));
-        setSyncStatus('ok');
-        render();
-      }
-    }catch(e){}
-  }, 30000);
-  // Full push every 3 minutes
-  setInterval(()=>syncNow(true), 180000);
+  // Every 3 minutes: push local state to cloud (no pull, no merge)
+  // This means other devices see updates on their next load or manual sync
+  setInterval(()=>pushOnly(), 180000);
 };
+
+async function pushOnly(){
+  const cfg=getSyncCfg();
+  if(!cfg.token||!cfg.gistId)return;
+  if(isSyncing)return;
+  setSyncStatus('ing');
+  const ok=await cloudPut(loadRaw());
+  setSyncStatus(ok?'ok':'off');
+}
 </script>
 </body>
 </html>
