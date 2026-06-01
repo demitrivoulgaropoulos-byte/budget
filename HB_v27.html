@@ -162,7 +162,7 @@ const CATS=[
   {id:'house',      label:'House Purchases',  icon:'🏠',weekly:50, tracked:true},
   {id:'entertain',  label:'Going Out',        icon:'🎭',weekly:35, tracked:true},
   {id:'transport',  label:'Uber / Taxi',      icon:'🚗',weekly:30, tracked:true},
-  {id:'treat',      label:'Treat',            icon:'✨',weekly:35, tracked:true},
+  {id:'treat',      label:'Treat',            icon:'✨',weekly:12.5,tracked:true},
   {id:'kidsschool', label:'Kids School',      icon:'📚',weekly:72, tracked:false,fixed:true},
   {id:'kidssports', label:'Kids Sports',      icon:'⚽',weekly:68, tracked:false,fixed:true},
   {id:'personalsubs',label:'Subscriptions',   icon:'📱',weekly:15, tracked:false,fixed:true},
@@ -174,12 +174,12 @@ const CATS=[
 ];
 
 const SAVINGS=[
-  {id:'overseas2027',label:'Overseas 2027',   weekly:200,note:'$18,500 target · Dec 2027',warn:'At this rate saves ~$16,500 — $2,000 short of target. Consider topping up when able.',phase:'until2027'},
-  {id:'inheritance', label:"Kids' Shares",    weekly:159,note:'Into investment shares, ongoing',phase:'always'},
-  {id:'emergency',   label:'Emergency Fund',  weekly:70, note:'$3,640/yr – shock absorber',phase:'always'},
-  {id:'renovation',  label:'Renovation Fund', weekly:37, note:'~$1,924/yr for repairs',phase:'always'},
-  {id:'localholiday',label:'Local Holiday',   weekly:67, note:'$7,000 every 2 years',phase:'always'},
-  {id:'overseas4yr', label:'Overseas Holiday',weekly:144,note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
+  {id:'overseas2027',label:'Xmas 2027 OS Trip', weekly:206.5,note:'$18,500 target · Dec 2027',warn:'Currently tracking ~$17,000 by Dec 2027 — $1,500 short. Top up when able.',phase:'until2027'},
+  {id:'inheritance', label:"Kids' Shares",       weekly:159,  note:'Into investment shares, ongoing',phase:'always'},
+  {id:'emergency',   label:'Emergency Fund',     weekly:70,   note:'$3,640/yr – shock absorber',phase:'always'},
+  {id:'renovation',  label:'Renovation Fund',    weekly:48,   note:'$2,496/yr for repairs & appliances',phase:'always'},
+  {id:'localholiday',label:'Local Holiday',      weekly:72,   note:'$7,500 every 2 years',phase:'always'},
+  {id:'overseas4yr', label:'Overseas Holiday',   weekly:144,  note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
 ];
 
 const SEED={"periods":{}};
@@ -437,7 +437,7 @@ function render(){
     const sq=activeSav.map(s=>mkSavSq(s)).join('');
     content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Saving this fn</div><div class="sc-val" style="color:var(--B)">${fm(savTot)}</div></div><div class="scard"><div class="sc-lbl">Saved since Jun 3</div><div class="sc-val" style="color:var(--G)">≈${fm(savCum)}</div></div></div>
     <div class="sec"><div class="sq-grid">${sq}</div>
-    <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip at $200/wk until Dec 2027, then overseas 4yr fund at $144/wk from Jan 2028.</p></div></div>`;
+    <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip at $200/wk until Dec 2027, then overseas 4yr fund at $144/wk from Jan 2028. Local Holiday saving increased to $89.50/wk — hits $7,000 target with a $2,308 buffer each 2-year cycle.</p></div></div>`;
   }else if(tab==='history'){
     const periods=data.periods||{},pkeys=Object.keys(periods).sort().reverse();
     const rows=pkeys.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:24px 0">No history yet</p>`:pkeys.map(k=>{
@@ -524,20 +524,10 @@ function render(){
       </div>
     </div>
 
-    <div class="isec" style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
-      <h3 style="margin-bottom:8px">⚡ Alternative: Netlify (even simpler, 2 mins)</h3>
-      <p style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:8px">If GitHub feels complicated, Netlify is easier — no account needed to start.</p>
-      <ol style="list-style:none;padding:0">
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--tx2)"><span class="snum">1</span><span>On your computer go to <strong>app.netlify.com/drop</strong></span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--tx2)"><span class="snum">2</span><span>Drag and drop <strong>HB_v27.html</strong> onto the page</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--tx2)"><span class="snum">3</span><span>Netlify gives you a URL like <strong>https://random-words.netlify.app</strong> — copy it</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--tx2)"><span class="snum">4</span><span>Create a free Netlify account to keep the site and get a cleaner URL. You can rename it to something like <strong>voulgaropoulos-budget.netlify.app</strong></span></li>
-      </ol>
-    </div>
 
     <div class="isec" style="background:var(--Gbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
       <h3 style="color:var(--Gtx);margin-bottom:10px">📱 Step 2 — Add to Home Screen on iPhone (Safari only)</h3>
-      <p style="font-size:13px;color:var(--Gtx);margin-bottom:10px;line-height:1.6"><strong>Do this on both iPhones</strong> once you have your GitHub or Netlify URL.</p>
+      <p style="font-size:13px;color:var(--Gtx);margin-bottom:10px;line-height:1.6"><strong>Do this on both iPhones</strong> once you have your GitHub URL.</p>
       <ol style="list-style:none;padding:0">
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">1</span><span>Open <strong>Safari</strong> on your iPhone (not Chrome, not Google app — must be Safari)</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">2</span><span>Type or paste your URL (e.g. <strong>https://yourname.github.io/budget/HB_v27.html</strong>) into the address bar and load it</span></li>
