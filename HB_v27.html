@@ -715,14 +715,15 @@ function openCat(id){
 function delTx(pk,id){
   const data=D();
   if(data.periods&&data.periods[pk]){
-    const before=data.periods[pk].transactions.length;
-    data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>String(t.id)!==String(id));
-    if(data.periods[pk].transactions.length===before){
-      // Fallback: numeric comparison
-      data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>Number(t.id)!==Number(id));
-    }
+    data.periods[pk].transactions=data.periods[pk].transactions.filter(
+      t=>String(t.id)!==String(id)&&Number(t.id)!==Number(id)
+    );
   }
-  saveLocal(data);closeOv('catOv');schedulePush();render();
+  saveLocal(data);
+  // Push immediately to cloud so merge can't restore the deleted item
+  clearTimeout(syncTimer);
+  cloudPut(data).then(ok=>{if(ok)setSyncStatus('ok');else setSyncStatus('off');});
+  closeOv('catOv');render();
 }
 
 function togglePeriod(pk){if(expandedPeriods.has(pk))expandedPeriods.delete(pk);else expandedPeriods.add(pk);render();}
@@ -731,15 +732,15 @@ function histDelTx(pk,id,e){
   e.preventDefault();
   const data=D();
   if(data.periods&&data.periods[pk]){
-    const before=data.periods[pk].transactions.length;
-    data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>String(t.id)!==String(id));
-    const after=data.periods[pk].transactions.length;
-    if(before===after){
-      // id didn't match - try numeric comparison as fallback
-      data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>Number(t.id)!==Number(id));
-    }
+    data.periods[pk].transactions=data.periods[pk].transactions.filter(
+      t=>String(t.id)!==String(id)&&Number(t.id)!==Number(id)
+    );
   }
-  saveLocal(data);schedulePush();render();
+  saveLocal(data);
+  // Push immediately to cloud so merge can't restore the deleted item
+  clearTimeout(syncTimer);
+  cloudPut(data).then(ok=>{if(ok)setSyncStatus('ok');else setSyncStatus('off');});
+  render();
 }
 function openRetroAdd(pk,e){
   e.stopPropagation();retroPeriodKey=pk;sel=null;
