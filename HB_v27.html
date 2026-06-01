@@ -70,7 +70,7 @@ h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
 .htx-cat{width:90px;flex-shrink:0;font-size:12px}
 .htx-desc{flex:1;font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .htx-amt{font-size:13px;font-weight:700;color:var(--R);white-space:nowrap}
-.htx-del{background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0}
+.htx-del{background:var(--Rbg);border:none;color:var(--Rtx);font-size:13px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px;flex-shrink:0}
 .htx-add-btn{width:100%;margin-top:10px;padding:9px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:1px dashed var(--br2);background:transparent;color:var(--tx2)}
 .htx-add-btn:active{background:var(--sf2)}
 .chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
@@ -450,7 +450,7 @@ function render(){
       const bgt=tracked.reduce((s,c)=>s+fb(c.id),0);
       const cs=tot>bgt?'cov':tot>bgt*.85?'cwn':'cok';
       const isExp=expandedPeriods.has(k);
-      const txRows=txs.map(t=>{const cat=CATS.find(c=>c.id===t.catId);return`<div class="htx-row"><div class="htx-cat">${cat?cat.icon:''} <span style="font-size:11px;color:var(--tx2)">${cat?cat.label:'?'}</span></div><div class="htx-desc">${t.description||t.catId}</div><div style="display:flex;align-items:center;gap:6px"><span class="htx-amt">-${fm2(t.amount)}</span><span style="font-size:10px;color:var(--tx3)">${fmtDate(t.date)}</span><button class="htx-del" onclick="histDelTx('${k}','${t.id}',event)">×</button></div></div>`;}).join('');
+      const txRows=txs.map(t=>{const cat=CATS.find(c=>c.id===t.catId);return`<div class="htx-row"><div class="htx-cat">${cat?cat.icon:''} <span style="font-size:11px;color:var(--tx2)">${cat?cat.label:'?'}</span></div><div class="htx-desc">${t.description||t.catId}</div><div style="display:flex;align-items:center;gap:6px"><span class="htx-amt">-${fm2(t.amount)}</span><span style="font-size:10px;color:var(--tx3)">${fmtDate(t.date)}</span><button class="htx-del" onclick="histDelTx('${k}','${t.id}',event)">Del</button></div></div>`;}).join('');
       return`<div class="hist-card"><div class="hist-banner" onclick="togglePeriod('${k}')"><div><div style="font-size:14px;font-weight:700">${getPL(idx)}</div><div style="font-size:12px;color:var(--tx2);margin-top:2px">${txs.length} transaction${txs.length!==1?'s':''}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="chip ${cs}">${fm(tot)}</span><span style="font-size:16px;color:var(--tx3);${isExp?'transform:rotate(180deg)':''}">⌄</span></div></div>${isExp?`<div class="htx-list">${txRows}<button class="htx-add-btn" onclick="openRetroAdd('${k}',event)">+ Add transaction to this period</button></div>`:''}</div>`;
     }).join('');
     content=`<div class="sec"><div class="sec-hd">All fortnights</div>${rows}</div>`;
@@ -696,7 +696,7 @@ function openCat(id){
   const bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id),av=bgt+cr-sp;
   const s=av<0?'over':av<bgt*0.2?'warn':'ok';
   const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id);
-  const txHtml=txs.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:16px 0">No transactions this fortnight</p>`:txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="tx-item"><div><div class="tx-d">${t.description}</div><div class="tx-m">${fmtDate(t.date)}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="tx-a">-${fm2(t.amount)}</span><button class="tx-del" onclick="delTx('${pk}','${t.id}')">×</button></div></div>`).join('');
+  const txHtml=txs.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:16px 0">No transactions this fortnight</p>`:txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="tx-item"><div><div class="tx-d">${t.description}</div><div class="tx-m">${fmtDate(t.date)}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="tx-a">-${fm2(t.amount)}</span><button class="tx-del" onclick="delTx('${pk}','${t.id}')">Del</button></div></div>`).join('');
   document.getElementById('catTitle').textContent=`${cat.icon} ${cat.label}`;
   document.getElementById('catBody').innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -713,10 +713,14 @@ function openCat(id){
 }
 
 function delTx(pk,id){
-  if(!confirm('Delete this transaction?'))return;
   const data=D();
   if(data.periods&&data.periods[pk]){
+    const before=data.periods[pk].transactions.length;
     data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>String(t.id)!==String(id));
+    if(data.periods[pk].transactions.length===before){
+      // Fallback: numeric comparison
+      data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>Number(t.id)!==Number(id));
+    }
   }
   saveLocal(data);closeOv('catOv');schedulePush();render();
 }
@@ -724,11 +728,16 @@ function delTx(pk,id){
 function togglePeriod(pk){if(expandedPeriods.has(pk))expandedPeriods.delete(pk);else expandedPeriods.add(pk);render();}
 function histDelTx(pk,id,e){
   e.stopPropagation();
-  if(!confirm('Delete this transaction?'))return;
+  e.preventDefault();
   const data=D();
   if(data.periods&&data.periods[pk]){
-    // Compare as strings to avoid large-number precision issues
+    const before=data.periods[pk].transactions.length;
     data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>String(t.id)!==String(id));
+    const after=data.periods[pk].transactions.length;
+    if(before===after){
+      // id didn't match - try numeric comparison as fallback
+      data.periods[pk].transactions=data.periods[pk].transactions.filter(t=>Number(t.id)!==Number(id));
+    }
   }
   saveLocal(data);schedulePush();render();
 }
