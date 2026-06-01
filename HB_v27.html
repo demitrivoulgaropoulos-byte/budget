@@ -153,15 +153,17 @@ const PS=new Date('2026-06-03T00:00:00');
 const TS=new Date('2026-06-03T00:00:00');
 
 const CATS=[
-  {id:'groceries',  label:'Groceries',       icon:'🛒',weekly:600,tracked:true},
-  {id:'eatingout',  label:'Eating Out',       icon:'🍽',weekly:80, tracked:true},
-  {id:'alcohol',    label:'Alcohol',          icon:'🍷',weekly:40, tracked:true},
-  {id:'gifts',      label:'Gifts',            icon:'🎁',weekly:29, tracked:true},
-  {id:'clothes',    label:'Clothes',          icon:'👕',weekly:75, tracked:true},
-  {id:'beauty',     label:'Beauty',           icon:'💅',weekly:80, tracked:true},
-  {id:'house',      label:'House Purchases',  icon:'🏠',weekly:50, tracked:true},
-  {id:'entertain',  label:'Going Out',        icon:'🎭',weekly:35, tracked:true},
-  {id:'transport',  label:'Uber / Taxi',      icon:'🚗',weekly:30, tracked:true},
+  {id:'groceries',  label:'Groceries',        icon:'🛒',weekly:600, tracked:true},
+  {id:'eatingout',  label:'Eating Out',       icon:'🍽',weekly:80,  tracked:true},
+  {id:'alcohol',    label:'Alcohol',          icon:'🍷',weekly:40,  tracked:true},
+  {id:'gifts',      label:'Gifts',            icon:'🎁',weekly:29,  tracked:true},
+  {id:'clothes',    label:'Clothes',          icon:'👕',weekly:75,  tracked:true},
+  {id:'beauty',     label:'Beauty',           icon:'💅',weekly:80,  tracked:true},
+  {id:'house',      label:'House Purchases',  icon:'🏠',weekly:50,  tracked:true},
+  {id:'entertain',  label:'Going Out',        icon:'🎭',weekly:35,  tracked:true},
+  {id:'uber',       label:'Uber / Taxi',      icon:'🚗',weekly:30,  tracked:true},
+  {id:'petcare',    label:'Pet Care',         icon:'🐾',weekly:17.5,tracked:true},
+  {id:'pttolls',    label:'PT/Tolls/Parking', icon:'🚌',weekly:23,  tracked:true},
   {id:'treat',      label:'Treat',            icon:'✨',weekly:12.5,tracked:true},
   {id:'kidsschool', label:'Kids School',      icon:'📚',weekly:72, tracked:false,fixed:true},
   {id:'kidssports', label:'Kids Sports',      icon:'⚽',weekly:68, tracked:false,fixed:true},
@@ -171,13 +173,14 @@ const CATS=[
   {id:'ato',        label:'ATO',              icon:'🏛',weekly:13, tracked:false,fixed:true},
   {id:'accountant', label:'Tax Accountant',   icon:'📋',weekly:4,  tracked:false,fixed:true},
   {id:'pestcontrol',label:'Pest Control',     icon:'🪲',weekly:4,  tracked:false,fixed:true},
+  {id:'unionfees',  label:'Union / Donations',icon:'🤝',weekly:23, tracked:false,fixed:true},
 ];
 
 const SAVINGS=[
-  {id:'overseas2027',label:'Xmas 2027 OS Trip', weekly:206.5,note:'$18,500 target · Dec 2027',warn:'Currently tracking ~$17,000 by Dec 2027 — $1,500 short. Top up when able.',phase:'until2027'},
-  {id:'inheritance', label:"Kids' Shares",       weekly:159,  note:'Into investment shares, ongoing',phase:'always'},
-  {id:'emergency',   label:'Emergency Fund',     weekly:70,   note:'$3,640/yr – shock absorber',phase:'always'},
-  {id:'renovation',  label:'Renovation Fund',    weekly:48,   note:'$2,496/yr for repairs & appliances',phase:'always'},
+  {id:'overseas2027',label:'Xmas 2027 OS Trip', weekly:158.5,note:'Target ~$13,000 by Dec 2027',phase:'until2027'},
+  {id:'inheritance', label:"Kids' Shares",       weekly:163.5,note:'Target $8,500/yr · into investment shares',phase:'always'},
+  {id:'emergency',   label:'Emergency Fund',     weekly:60,   note:'$3,120/yr – shock absorber',phase:'always'},
+  {id:'renovation',  label:'Renovation Fund',    weekly:38,   note:'$1,976/yr for repairs & appliances',phase:'always'},
   {id:'localholiday',label:'Local Holiday',      weekly:72,   note:'$7,500 every 2 years',phase:'always'},
   {id:'overseas4yr', label:'Overseas Holiday',   weekly:144,  note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
 ];
@@ -429,7 +432,7 @@ function render(){
     const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
     const fixTot=fixed.reduce((s,c)=>s+fb(c.id),0),fixSp=fixed.reduce((s,c)=>s+ps(data,pk,c.id),0);
     content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Budget this fn</div><div class="sc-val">${fm(fixTot)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(fixSp)}</div></div></div>
-    <div class="sec"><div class="ibox ibl" style="margin-bottom:10px"><p>These lines run automatically. Funeral Fund $100/fn · ATO $27/fn · Tax Accountant $8/fn · Pest Control $8/fn — added based on your statement history.</p></div>
+    <div class="sec"><div class="ibox ibl" style="margin-bottom:10px"><p>Fixed costs that run automatically each fortnight — not actively managed day to day.</p></div>
     <div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='savings'){
     const savTot=activeSav.reduce((a,s)=>a+s.weekly*2,0);
@@ -437,7 +440,7 @@ function render(){
     const sq=activeSav.map(s=>mkSavSq(s)).join('');
     content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Saving this fn</div><div class="sc-val" style="color:var(--B)">${fm(savTot)}</div></div><div class="scard"><div class="sc-lbl">Saved since Jun 3</div><div class="sc-val" style="color:var(--G)">≈${fm(savCum)}</div></div></div>
     <div class="sec"><div class="sq-grid">${sq}</div>
-    <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip at $200/wk until Dec 2027, then overseas 4yr fund at $144/wk from Jan 2028. Local Holiday saving increased to $89.50/wk — hits $7,000 target with a $2,308 buffer each 2-year cycle.</p></div></div>`;
+    <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip saving at $158.50/wk — target ~$13,000 by Dec 2027. From Jan 2028 the overseas 4yr fund starts at $144/wk.</p></div></div>`;
   }else if(tab==='history'){
     const periods=data.periods||{},pkeys=Object.keys(periods).sort().reverse();
     const rows=pkeys.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:24px 0">No history yet</p>`:pkeys.map(k=>{
