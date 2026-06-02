@@ -371,11 +371,11 @@ function carry(data,pk,id){
 }
 function avail(data,pk,id){return fb(id)+carry(data,pk,id)-ps(data,pk,id);}
 function totalSpentAll(data,id){return Object.values(data.periods||{}).reduce((s,p)=>s+((p.transactions||[]).filter(t=>t.catId===id).reduce((a,t)=>a+t.amount,0)),0);}
-function totalBudgetAll(id){
-  // Only count fully completed fortnights, not a continuous fraction
-  const diffDays=Math.floor((new Date()-TS)/864e5);
-  const completedFns=Math.floor(diffDays/14);
-  return completedFns*fb(id);
+function totalBudgetAll(id,viewOffset){
+  // Budget accumulates one fortnightly allocation per fortnight
+  // Use the viewed period offset so navigating forward shows increasing totals
+  const offset=viewOffset!==undefined?viewOffset:getCO();
+  return (offset+1)*fb(id);
 }
 function cumSav(weekly){
   // Only count fully completed fortnights
@@ -402,7 +402,7 @@ function mkSq(data,pk,cat,clickable){
   const id=cat.id,bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id);
   const eff=bgt+cr,p=pct(sp,eff>0?eff:bgt),s=scCls(sp,bgt);
   let carryHtml=cr<-0.5?`<div class="sq-carry neg">▲ ${fm(Math.abs(cr))} deficit</div>`:cr>0.5?`<div class="sq-carry pos">▼ ${fm(cr)} surplus</div>`:`<div class="sq-carry none">No carry</div>`;
-  const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id);
+  const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
   const ca=clickable?`onclick="openCat('${id}')" `:'';
   return`<div class="sq ${s}" ${ca}>
     <div><div class="sq-hd"><span class="sq-name">${cat.label}</span><span class="sq-icon">${cat.icon}</span></div>
@@ -706,7 +706,7 @@ function openCat(id){
   const txs=((data.periods||{})[pk]?.transactions||[]).filter(t=>t.catId===id);
   const bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id),av=bgt+cr-sp;
   const s=av<0?'over':av<bgt*0.2?'warn':'ok';
-  const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id);
+  const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
   const txHtml=txs.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:16px 0">No transactions this fortnight</p>`:txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="tx-item"><div><div class="tx-d">${t.description}</div><div class="tx-m">${fmtDate(t.date)}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="tx-a">-${fm2(t.amount)}</span><button class="tx-del" onclick="delTx('${pk}','${t.id}')">Del</button></div></div>`).join('');
   document.getElementById('catTitle').textContent=`${cat.icon} ${cat.label}`;
   document.getElementById('catBody').innerHTML=`
