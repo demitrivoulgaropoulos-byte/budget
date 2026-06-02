@@ -431,7 +431,7 @@ function render(){
   const pdDate2=new Date(pk+'T12:00:00');
   const activeSav=SAVINGS.filter(s=>s.phase==='always'||(s.phase==='until2027'&&pdDate2<=new Date('2027-12-31T00:00:00'))||(s.phase==='from2028'&&pdDate2>=new Date('2028-01-01T00:00:00')));
   const cfg=getSyncCfg();
-  const syncConfigured=!!(cfg.apiKey&&cfg.binId);
+  const syncConfigured=!!(cfg.token&&cfg.gistId);
 
   let content='';
   if(tab==='snapshot'){
@@ -496,7 +496,7 @@ function render(){
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bin ID: ${cfg.binId||'none'}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
       ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
       <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
       ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
@@ -595,7 +595,7 @@ function render(){
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bin ID: ${cfg.binId||'none'}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
       ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
       <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
       ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
