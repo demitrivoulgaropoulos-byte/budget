@@ -270,45 +270,43 @@ function mergeData(local,cloud){
   return merged;
 }
 
-async function syncNow(pullAndMerge){
-  // pullAndMerge=true: pull from cloud, merge, save locally (used on page load only)
-  // pullAndMerge=false: just push local state to cloud
+async function syncNow(){
+  // LOCAL IS ALWAYS THE SOURCE OF TRUTH.
+  // On load: pull from cloud ONLY if local has no transactions (new device setup).
+  // Otherwise: push local to cloud. Never overwrite local with cloud data.
   if(isSyncing)return;
   const cfg=getSyncCfg();
   if(!cfg.token||!cfg.gistId){setSyncStatus('no');return;}
   isSyncing=true;
   setSyncStatus('ing');
   try{
-    if(pullAndMerge===false){
-      // Pull, merge, save — used on initial page load
+    const local=loadRaw();
+    const localCount=Object.values(local.periods||{}).reduce((s,p)=>s+(p.transactions||[]).length,0);
+    if(localCount===0){
+      // Local is empty - this is a new device, pull from cloud
       const cloud=await cloudGet();
-      const local=loadRaw();
-      let toSave=local;
       if(cloud&&cloud.periods){
-        toSave=mergeData(local,cloud);
+        const cloudCount=Object.values(cloud.periods).reduce((s,p)=>s+(p.transactions||[]).length,0);
+        if(cloudCount>0){
+          localStorage.setItem(SK,JSON.stringify(cloud));
+          setSyncStatus('ok');
+          isSyncing=false;
+          render();
+          return;
+        }
       }
-      const ok=await cloudPut(toSave);
-      if(!ok){setSyncStatus('off');isSyncing=false;return;}
-      const newHash=hashData(toSave);
-      const changed=newHash!==lastSyncedHash;
-      lastSyncedHash=newHash;
-      localStorage.setItem(SK,JSON.stringify(toSave));
-      setSyncStatus('ok');
-      if(changed)render();
-    } else {
-      // Push only — local is source of truth, just broadcast to cloud
-      const local=loadRaw();
-      const ok=await cloudPut(local);
-      setSyncStatus(ok?'ok':'off');
-      lastSyncedHash=hashData(local);
     }
+    // Local has data OR cloud is also empty — push local to cloud
+    const ok=await cloudPut(local);
+    setSyncStatus(ok?'ok':'off');
+    lastSyncedHash=hashData(local);
   }catch(e){setSyncStatus('off');}
   isSyncing=false;
 }
 
 function schedulePush(){
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>syncNow(true),2000);
+  syncTimer=setTimeout(()=>syncNow(),2000);
 }
 
 function setSyncStatus(s){
@@ -336,7 +334,7 @@ async function doSyncSetup(){
   }
   setSyncCfg({token,gistId});
   closeOv('syncSetupOv');
-  await syncNow(true);
+  await syncNow();
   alert('Cloud sync connected!\n\nGist ID: '+gistId+'\n\nSave this Gist ID — share it with your wife along with the token so her phone connects to the same data.');
   render();
 }
@@ -723,7 +721,7 @@ function openCat(id){
   document.getElementById('catOv').classList.add('open');
 }
 
-function delTx(pk,id){
+async function delTx(pk,id){
   const data=D();
   if(data.periods&&data.periods[pk]){
     data.periods[pk].transactions=data.periods[pk].transactions.filter(
@@ -732,12 +730,13 @@ function delTx(pk,id){
   }
   saveLocal(data);
   clearTimeout(syncTimer);
-  cloudPut(data);
+  await cloudPut(data);
+  setSyncStatus('ok');
   closeOv('catOv');render();
 }
 
 function togglePeriod(pk){if(expandedPeriods.has(pk))expandedPeriods.delete(pk);else expandedPeriods.add(pk);render();}
-function histDelTx(pk,id,e){
+async function histDelTx(pk,id,e){
   e.stopPropagation();
   e.preventDefault();
   const data=D();
@@ -748,7 +747,8 @@ function histDelTx(pk,id,e){
   }
   saveLocal(data);
   clearTimeout(syncTimer);
-  cloudPut(data);
+  await cloudPut(data);
+  setSyncStatus('ok');
   render();
 }
 function openRetroAdd(pk,e){
@@ -788,7 +788,7 @@ document.addEventListener('click',e=>{document.querySelectorAll('.ov').forEach(o
 
 async function manualSync(){
   setSyncStatus('ing');
-  await syncNow(true);
+  await syncNow();
   render();
   alert(syncState==='ok'?'✅ Sync successful! All devices are up to date.':'❌ Sync failed. Check your internet connection and try again.');
 }
@@ -813,7 +813,7 @@ async function fixSync(){
 window.onload=async function(){
   // On load: pull from cloud once and merge, then local is source of truth
   render();
-  await syncNow(false);
+  await syncNow();
   render();
   // Every 3 minutes: push local state to cloud (no pull, no merge)
   // This means other devices see updates on their next load or manual sync
