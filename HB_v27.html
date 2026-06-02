@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Family Budget</title>
+<style>
+:root{--bg:#F7F5F0;--sf:#FFF;--sf2:#F0EDE6;--tx:#1A1917;--tx2:#6B6760;--tx3:#9B9890;--br:rgba(0,0,0,0.08);--br2:rgba(0,0,0,0.15);--G:#1D9E75;--Gbg:#E1F5EE;--Gtx:#085041;--A:#BA7517;--Abg:#FAEEDA;--Atx:#633806;--R:#A32D2D;--Rbg:#FCEBEB;--Rtx:#501313;--B:#185FA5;--Bbg:#E6F1FB;--Btx:#042C53;--rad:13px;--rs:9px}
+@media(prefers-color-scheme:dark){:root{--bg:#1A1917;--sf:#242320;--sf2:#2C2C2A;--tx:#F1EFE8;--tx2:#9B9890;--tx3:#5A5956;--br:rgba(255,255,255,0.07);--br2:rgba(255,255,255,0.13);--Gbg:#04342C;--Gtx:#9FE1CB;--Abg:#412402;--Atx:#FAC775;--Rbg:#501313;--Rtx:#F7C1C1;--Bbg:#042C53;--Btx:#B5D4F4}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px}
+.hdr{padding:10px 16px 8px;position:sticky;top:0;z-index:50;background:var(--bg)}
+.hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.hdr-titles{flex:1}
+h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
+.h-sub{font-size:11px;color:var(--tx3);font-weight:500;margin-top:1px}
+.hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.bdg{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.bdg-now{background:var(--Gbg);color:var(--Gtx)}
+.bdg-past{background:var(--sf2);color:var(--tx3)}
+/* Sync status indicator */
+.sync-dot{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600}
+.sync-dot .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sync-ok .dot{background:var(--G)}.sync-ok{color:var(--Gtx)}
+.sync-ing .dot{background:var(--A);animation:pulse .8s infinite}.sync-ing{color:var(--Atx)}
+.sync-off .dot{background:var(--R)}.sync-off{color:var(--Rtx)}
+.sync-no .dot{background:var(--tx3)}.sync-no{color:var(--tx3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.pnav{display:flex;align-items:center;gap:8px}
+.pb{background:var(--sf);border:1px solid var(--br2);border-radius:8px;padding:7px 14px;font-size:14px;font-weight:700;color:var(--tx);cursor:pointer}
+.pb:active{opacity:.7}
+.plbl{font-size:13px;color:var(--tx2);flex:1;text-align:center;font-weight:500}
+.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:sticky;top:68px;z-index:49}
+.tab{flex:1;padding:5px 1px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-radius:8px;cursor:pointer;transition:all .12s;white-space:nowrap}
+.tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
+.sum-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
+.scard{background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:9px 12px}
+.sc-lbl{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+.sc-val{font-size:18px;font-weight:700;letter-spacing:-.4px}
+.sq-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:12px}
+.sq{background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:8px 10px 7px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.sq:active{background:var(--sf2)}
+.sq-hd{display:flex;justify-content:space-between;align-items:center}
+.sq-icon{font-size:15px}
+.sq-name{font-size:15px;font-weight:700;color:var(--tx2);letter-spacing:.1px;flex:1;padding-right:4px;line-height:1.2}
+.sq-main .spent{font-size:22px;font-weight:700}
+.sq-main .of{font-size:14px;color:var(--tx2);font-weight:500}
+.sq-main .budget{font-size:20px;font-weight:600}
+.sq.ok .sq-main .spent{color:var(--G)}.sq.warn .sq-main .spent{color:var(--A)}.sq.over .sq-main .spent{color:var(--R)}
+.sq-carry{font-size:13px;font-weight:600;line-height:1.2}
+.sq-carry.neg{color:var(--R)}.sq-carry.pos{color:var(--G)}.sq-carry.none{color:var(--tx3);font-weight:400}
+.sq-overall{font-size:13px;color:var(--tx3);line-height:1.2}
+.sq-bar{height:3px;background:var(--sf2);border-radius:2px;overflow:hidden;margin-top:2px}
+.sq-fill{height:100%;border-radius:2px}
+.sq-fill.ok{background:var(--G)}.sq-fill.warn{background:var(--A)}.sq-fill.over{background:var(--R);width:100%!important}
+.sv-sq{background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:8px 10px 7px;display:flex;flex-direction:column;gap:3px}
+.sv-fn{font-size:24px;font-weight:700;letter-spacing:-.3px;color:var(--B)}
+.sv-fnlbl{font-size:13px;color:var(--tx3);font-weight:600;letter-spacing:.2px;text-transform:uppercase}
+.sv-note{font-size:14px;color:var(--tx2);line-height:1.3}
+.sv-cum{font-size:13px;font-weight:700;color:var(--Gtx);background:var(--Gbg);padding:2px 6px;border-radius:10px;display:inline-block}
+.sv-warn{font-size:9px;font-weight:600;color:var(--Rtx);background:var(--Rbg);padding:2px 6px;border-radius:10px;display:inline-block}
+.sec{padding:0 16px;margin-bottom:10px}
+.sec-hd{font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:10px}
+.hist-card{background:var(--sf);border:1px solid var(--br);border-radius:var(--rs);padding:0;margin-bottom:8px;overflow:hidden}
+.hist-banner{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer}
+.hist-banner:active{background:var(--sf2)}
+.htx-list{border-top:1px solid var(--br);padding:8px 12px 12px}
+.htx-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--br);gap:8px}
+.htx-row:last-of-type{border-bottom:none}
+.htx-cat{width:90px;flex-shrink:0;font-size:12px}
+.htx-desc{flex:1;font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.htx-amt{font-size:13px;font-weight:700;color:var(--R);white-space:nowrap}
+.htx-del{background:var(--Rbg);border:none;color:var(--Rtx);font-size:13px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px;flex-shrink:0}
+.htx-add-btn{width:100%;margin-top:10px;padding:9px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:1px dashed var(--br2);background:transparent;color:var(--tx2)}
+.htx-add-btn:active{background:var(--sf2)}
+.chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.cok{background:var(--Gbg);color:var(--Gtx)}.cov{background:var(--Rbg);color:var(--Rtx)}.cwn{background:var(--Abg);color:var(--Atx)}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.48);z-index:200;align-items:flex-end}
+.ov.open{display:flex}
+.sheet{background:var(--sf);border-radius:20px 20px 0 0;padding:18px 18px 44px;width:100%;max-height:88vh;overflow-y:auto}
+.hdl{width:34px;height:4px;background:var(--br2);border-radius:2px;margin:0 auto 16px}
+.sh2{font-size:18px;font-weight:700;margin-bottom:16px;letter-spacing:-.3px}
+.fg{margin-bottom:13px}
+.fl{font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
+.fi{width:100%;padding:12px 13px;background:var(--sf2);border:1px solid var(--br2);border-radius:var(--rs);font-size:16px;color:var(--tx);outline:none}
+.fi:focus{border-color:var(--B)}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.co{padding:9px 6px;background:var(--sf2);border:2px solid transparent;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3}
+.co.sel{border-color:var(--tx);background:var(--tx);color:var(--bg)}
+.brow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.btn{padding:13px;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;border:none}
+.bp{background:var(--tx);color:var(--bg)}.bs{background:var(--sf2);color:var(--tx)}
+.btn:active{opacity:.8;transform:scale(.98)}
+.bw{width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);margin-bottom:8px;display:block;text-align:center}
+.bw:active{opacity:.8}
+.tx-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--br)}
+.tx-item:last-child{border-bottom:none}
+.tx-d{font-size:14px;font-weight:500}
+.tx-m{font-size:11px;color:var(--tx3);margin-top:1px}
+.tx-a{font-size:14px;font-weight:700;color:var(--R)}
+.tx-del{background:none;border:none;color:var(--tx3);font-size:20px;cursor:pointer;padding:2px 8px}
+.stat3{background:var(--sf);border:1px solid var(--br);border-radius:var(--rs);padding:10px 11px;flex:1}
+.s3l{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px}
+.s3v{font-size:16px;font-weight:700;letter-spacing:-.2px}
+.ibox{border-radius:var(--rs);padding:12px 14px;margin-bottom:12px;line-height:1.6}
+.ibox p,.ibox li{font-size:13px}.ibox ul,.ibox ol{padding-left:16px;margin-top:4px}
+.ibl{background:var(--Bbg)}.ibl p,.ibl li{color:var(--Btx)}
+.iam{background:var(--Abg)}.iam p,.iam li{color:var(--Atx)}
+.ign{background:var(--Gbg)}.ign p,.ign li{color:var(--Gtx)}
+.isec{margin-bottom:22px}
+.isec h3{font-size:15px;font-weight:700;margin-bottom:8px}
+.isec p,.isec li{font-size:14px;color:var(--tx2);line-height:1.7}
+.isec ul,.isec ol{padding-left:18px;margin-top:4px}.isec li{margin-bottom:3px}
+.snum{display:inline-flex;width:22px;height:22px;background:var(--tx);color:var(--bg);border-radius:50%;font-size:11px;font-weight:700;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0;vertical-align:middle}
+textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13px}
+.fab{position:fixed;bottom:22px;right:16px;width:54px;height:54px;background:var(--tx);color:var(--bg);border:none;border-radius:50%;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(0,0,0,0.22);z-index:100}
+.fab:active{transform:scale(.93)}
+.sync-banner{margin:0 16px 12px;padding:10px 14px;border-radius:var(--rs);font-size:12px;font-weight:600;display:none}
+.sync-banner.show{display:block}
+.sync-banner.ok{background:var(--Gbg);color:var(--Gtx)}
+.sync-banner.err{background:var(--Rbg);color:var(--Rtx)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button class="fab" onclick="openAdd()" aria-label="Add">+</button>
+<div class="ov" id="addOv"><div class="sheet">
+  <div class="hdl"></div><h2 class="sh2">Add Expense</h2>
+  <div class="fg"><label class="fl">Category</label><div class="cg" id="cg"></div></div>
+  <div class="fg"><label class="fl">Amount ($)</label><input class="fi" type="number" id="amt" placeholder="0.00" step="0.01" inputmode="decimal"></div>
+  <div class="fg"><label class="fl">Description (optional)</label><input class="fi" type="text" id="desc" placeholder="e.g. Woolworths, Uber Eats"></div>
+  <div class="brow"><button class="btn bs" onclick="closeOv('addOv')">Cancel</button><button class="btn bp" onclick="saveExp()">Add</button></div>
+</div></div>
+<div class="ov" id="catOv"><div class="sheet"><div class="hdl"></div><h2 class="sh2" id="catTitle"></h2><div id="catBody"></div></div></div>
+<div class="ov" id="impOv"><div class="sheet">
+  <div class="hdl"></div><h2 class="sh2">Import Statement JSON</h2>
+  <div class="ibox ibl"><p>Open a new Claude chat, say <em>"Process my statement for budget tracker — export as JSON"</em> and attach the PDF. Paste the result here. Categories: Groceries, Eating Out, Alcohol, Gifts, Clothes, Beauty, House Purchases, Going Out, Uber / Taxi, Treat.</p></div>
+  <div class="fg"><label class="fl">Paste JSON</label><textarea class="fi" id="impJson"></textarea></div>
+  <div class="brow"><button class="btn bs" onclick="closeOv('impOv')">Cancel</button><button class="btn bp" onclick="doImport()">Import</button></div>
+</div></div>
+<div class="ov" id="syncSetupOv"><div class="sheet">
+  <div class="hdl"></div><h2 class="sh2">☁️ Set Up Cloud Sync</h2>
+  <div class="ibox ibl"><p><strong>Uses your existing GitHub account</strong> — no new accounts needed. Creates a private Gist in your GitHub to store the data. All three devices share the same live data automatically.</p></div>
+  <div class="fg"><label class="fl">GitHub Personal Access Token</label><input class="fi" type="text" id="apiKeyInput" placeholder="ghp_..."></div>
+  <div class="fg" id="existingBinGroup" style="display:none"><label class="fl">Gist ID (if already set up on another device)</label><input class="fi" type="text" id="binIdInput" placeholder="Leave blank to create new"></div>
+  <button class="btn bp" style="width:100%;margin-top:4px" onclick="toggleBinField()">Already set up on another device? Enter Gist ID</button>
+  <div class="brow" style="margin-top:12px"><button class="btn bs" onclick="closeOv('syncSetupOv')">Cancel</button><button class="btn bp" onclick="doSyncSetup()">Connect</button></div>
+</div></div>
+
+<script>
+const SK='bgt_v27';
+const PS=new Date('2026-06-03T00:00:00');
+const TS=new Date('2026-06-03T00:00:00');
+
+const CATS=[
+  {id:'groceries',  label:'Groceries',        icon:'🛒',weekly:575, tracked:true},
+  {id:'eatingout',  label:'Eating Out',       icon:'🍽',weekly:70,  tracked:true},
+  {id:'alcohol',    label:'Alcohol',          icon:'🍷',weekly:35,  tracked:true},
+  {id:'gifts',      label:'Gifts',            icon:'🎁',weekly:29,  tracked:true},
+  {id:'clothes',    label:'Clothes',          icon:'👕',weekly:68,  tracked:true},
+  {id:'beauty',     label:'Beauty',           icon:'💅',weekly:70,  tracked:true},
+  {id:'house',      label:'House Purchases',  icon:'🏠',weekly:50,  tracked:true},
+  {id:'entertain',  label:'Going Out',        icon:'🎭',weekly:30,  tracked:true},
+  {id:'uber',       label:'Uber / Taxi',      icon:'🚗',weekly:30,  tracked:true},
+  {id:'petcare',    label:'Pet Care',         icon:'🐾',weekly:17.5,tracked:true},
+  {id:'pttolls',    label:'PT/Tolls/Parking', icon:'🚌',weekly:23,  tracked:true},
+  {id:'treat',      label:'Treat',            icon:'✨',weekly:12.5,tracked:true},
+  {id:'kidsschool', label:'Kids School',      icon:'📚',weekly:72, tracked:false,fixed:true},
+  {id:'kidssports', label:'Kids Sports',      icon:'⚽',weekly:68, tracked:false,fixed:true},
+  {id:'personalsubs',label:'Subscriptions',   icon:'📱',weekly:15, tracked:false,fixed:true},
+  {id:'pocketmoney',label:'Pocket Money',     icon:'💰',weekly:20, tracked:false,fixed:true},
+  {id:'funeralfund',label:'Funeral Fund',     icon:'🕯',weekly:50, tracked:false,fixed:true},
+  {id:'ato',        label:'ATO',              icon:'🏛',weekly:13, tracked:false,fixed:true},
+  {id:'accountant', label:'Tax Accountant',   icon:'📋',weekly:4,  tracked:false,fixed:true},
+  {id:'pestcontrol',label:'Pest Control',     icon:'🪲',weekly:4,  tracked:false,fixed:true},
+  {id:'unionfees',  label:'Union / Donations',icon:'🤝',weekly:23, tracked:false,fixed:true},
+  {id:'petrolcar',  label:'Petrol / Car',     icon:'⛽',weekly:55, tracked:false,fixed:true},
+];
+
+const SAVINGS=[
+  {id:'overseas2027',label:'Xmas 2027 OS Trip', weekly:145.5,note:'Target ~$12,000 by Dec 2027',phase:'until2027'},
+  {id:'inheritance', label:"Kids' Shares",       weekly:163.5,note:'Target $8,500/yr · into investment shares',phase:'always'},
+  {id:'emergency',   label:'Emergency Fund',     weekly:60,   note:'$3,120/yr – shock absorber',phase:'always'},
+  {id:'renovation',  label:'Renovation Fund',    weekly:38,   note:'$1,976/yr for repairs & appliances',phase:'always'},
+  {id:'localholiday',label:'Local Holiday',      weekly:62,   note:'$7,500 every 2 years (saves ~$6,400 per cycle)',phase:'always'},
+  {id:'overseas4yr', label:'Overseas Holiday',   weekly:144,  note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
+];
+
+const SEED={"periods":{}};
+
+// ── CLOUD SYNC via GitHub Gist ──
+let syncState='no';
+let syncTimer=null;
+let isSyncing=false;
+let lastSyncedHash='';
+
+function getSyncCfg(){
+  try{return JSON.parse(localStorage.getItem(SK+'_sync'))||{};}catch(e){return{};}
+}
+function setSyncCfg(c){localStorage.setItem(SK+'_sync',JSON.stringify(c));}
+
+function hashData(d){
+  let count=0,sum=0;
+  Object.values(d.periods||{}).forEach(p=>(p.transactions||[]).forEach(t=>{count++;sum+=t.amount||0;}));
+  return count+'_'+sum.toFixed(2);
+}
+
+async function cloudGet(){
+  const cfg=getSyncCfg();
+  if(!cfg.token||!cfg.gistId)return null;
+  try{
+    const r=await fetch('https://api.github.com/gists/'+cfg.gistId,{
+      headers:{'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json'}
+    });
+    if(!r.ok)return null;
+    const j=await r.json();
+    const content=j.files?.['budget.json']?.content;
+    if(!content)return null;
+    return JSON.parse(content);
+  }catch(e){return null;}
+}
+
+async function cloudPut(data){
+  const cfg=getSyncCfg();
+  if(!cfg.token||!cfg.gistId)return false;
+  const body=JSON.stringify({files:{'budget.json':{content:JSON.stringify(data)}}});
+  const headers={'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'};
+  // Try up to 3 times - GitHub Gist returns 409 if requests come too close together
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      if(attempt>0)await new Promise(r=>setTimeout(r,1500*attempt));
+      const r=await fetch('https://api.github.com/gists/'+cfg.gistId,{method:'PATCH',headers,body});
+      if(r.ok)return true;
+      if(r.status===409){continue;} // conflict - retry
+      return false;
+    }catch(e){
+      if(attempt===2)return false;
+    }
+  }
+  return false;
+}
+
+async function cloudCreateGist(token){
+  try{
+    const r=await fetch('https://api.github.com/gists',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({description:'Family Budget Data',public:false,files:{'budget.json':{content:JSON.stringify({periods:{}})}}})
+    });
+    if(!r.ok)return null;
+    const j=await r.json();
+    return j.id||null;
+  }catch(e){return null;}
+}
+
+function mergeData(local,cloud){
+  const merged={periods:{}};
+  const allPk=new Set([...Object.keys(local.periods||{}),...Object.keys(cloud.periods||{})]);
+  allPk.forEach(pk=>{
+    const lTx=(local.periods[pk]?.transactions||[]);
+    const cTx=(cloud.periods[pk]?.transactions||[]);
+    const byId={};
+    lTx.forEach(t=>{byId[t.id]=t;});
+    cTx.forEach(t=>{
+      if(!byId[t.id]||(t._ts||0)>(byId[t.id]._ts||0))byId[t.id]=t;
+    });
+    const txs=Object.values(byId).filter(t=>!t._deleted);
+    if(txs.length>0)merged.periods[pk]={transactions:txs};
+  });
+  return merged;
+}
+
+async function syncNow(){
+  // LOCAL IS ALWAYS THE SOURCE OF TRUTH.
+  // On load: pull from cloud ONLY if local has no transactions (new device setup).
+  // Otherwise: push local to cloud. Never overwrite local with cloud data.
+  if(isSyncing)return;
+  const cfg=getSyncCfg();
+  if(!cfg.token||!cfg.gistId){setSyncStatus('no');return;}
+  isSyncing=true;
+  setSyncStatus('ing');
+  try{
+    const local=loadRaw();
+    const localCount=Object.values(local.periods||{}).reduce((s,p)=>s+(p.transactions||[]).length,0);
+    if(localCount===0){
+      // Local is empty - this is a new device, pull from cloud
+      const cloud=await cloudGet();
+      if(cloud&&cloud.periods){
+        const cloudCount=Object.values(cloud.periods).reduce((s,p)=>s+(p.transactions||[]).length,0);
+        if(cloudCount>0){
+          localStorage.setItem(SK,JSON.stringify(cloud));
+          setSyncStatus('ok');
+          isSyncing=false;
+          render();
+          return;
+        }
+      }
+    }
+    // Local has data OR cloud is also empty — push local to cloud
+    const ok=await cloudPut(local);
+    setSyncStatus(ok?'ok':'off');
+    lastSyncedHash=hashData(local);
+  }catch(e){setSyncStatus('off');}
+  isSyncing=false;
+}
+
+function schedulePush(){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncNow(),2000);
+}
+
+function setSyncStatus(s){
+  syncState=s;
+  const el=document.getElementById('syncStatus');
+  if(!el)return;
+  const labels={no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'};
+  el.className='sync-dot sync-'+s;
+  el.innerHTML='<span class="dot"></span>'+(labels[s]||s);
+}
+
+async function doSyncSetup(){
+  const token=document.getElementById('apiKeyInput').value.trim();
+  const gistIdEntered=document.getElementById('binIdInput').value.trim();
+  if(!token){alert('Please enter your GitHub token');return;}
+  setSyncStatus('ing');
+  let gistId=gistIdEntered;
+  if(!gistId){
+    gistId=await cloudCreateGist(token);
+    if(!gistId){
+      alert('Could not connect to GitHub.\n\nCheck your token is copied correctly and try again.');
+      setSyncStatus('off');
+      return;
+    }
+  }
+  setSyncCfg({token,gistId});
+  closeOv('syncSetupOv');
+  await syncNow();
+  alert('Cloud sync connected!\n\nGist ID: '+gistId+'\n\nSave this Gist ID — share it with your wife along with the token so her phone connects to the same data.');
+  render();
+}
+
+function toggleBinField(){
+  const g=document.getElementById('existingBinGroup');
+  g.style.display=g.style.display==='none'?'block':'none';
+}
+
+// ── DATA ──
+function loadRaw(){try{return JSON.parse(localStorage.getItem(SK))||{periods:{}};}catch(e){return{periods:{}};}}
+function saveLocal(d){localStorage.setItem(SK,JSON.stringify(d));}
+function D(){const e=loadRaw();if(!e.periods)e.periods={};return e;}
+
+function getPO(ds){const d=new Date(ds+'T12:00:00'),dd=Math.floor((d-PS)/864e5);return Math.floor(dd/14);}
+function getPK(o){const d=new Date(PS);d.setDate(d.getDate()+o*14);return d.toISOString().slice(0,10);}
+function getPL(o){
+  const s=new Date(PS);s.setDate(s.getDate()+o*14);
+  const e=new Date(s);e.setDate(e.getDate()+13);
+  return`${s.toLocaleDateString('en-AU',{day:'numeric',month:'short'})} – ${e.toLocaleDateString('en-AU',{day:'numeric',month:'short'})}`;
+}
+function getCO(){return Math.floor(Math.floor((new Date()-PS)/864e5)/14);}
+function fb(id){const c=CATS.find(x=>x.id===id);return c?c.weekly*2:0;}
+function ps(data,pk,id){return((data.periods||{})[pk]?.transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0);}
+function carry(data,pk,id){
+  let c=0;
+  for(const k of Object.keys(data.periods||{}).sort()){
+    if(k>=pk)break;
+    c+=fb(id)-((data.periods[k].transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0));
+  }
+  return c;
+}
+function avail(data,pk,id){return fb(id)+carry(data,pk,id)-ps(data,pk,id);}
+function totalSpentAll(data,id){return Object.values(data.periods||{}).reduce((s,p)=>s+((p.transactions||[]).filter(t=>t.catId===id).reduce((a,t)=>a+t.amount,0)),0);}
+function totalBudgetAll(id,viewOffset){
+  // Budget accumulates one fortnightly allocation per fortnight
+  // Use the viewed period offset so navigating forward shows increasing totals
+  const offset=viewOffset!==undefined?viewOffset:getCO();
+  return (offset+1)*fb(id);
+}
+function cumSav(weekly){
+  // Only count fully completed fortnights
+  const diffDays=Math.floor((new Date()-TS)/864e5);
+  const completedFns=Math.floor(diffDays/14);
+  return completedFns*weekly*2;
+}
+function fm(n){return'$'+Math.abs(Math.round(n)).toLocaleString('en-AU');}
+function fm2(n){return'$'+Math.abs(n).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtDate(iso){if(!iso||iso.length<10)return iso||'';const[y,m,d]=iso.split('-');return d+'/'+m+'/'+y;}
+function pct(a,b){return b>0?Math.min(100,Math.max(0,Math.round(a/b*100))):0;}
+function scCls(sp,bgt){if(bgt-sp<0)return'over';if((bgt-sp)/bgt<0.2)return'warn';return'ok';}
+
+let tab='snapshot',cur=getCO(),sel=null;
+let expandedPeriods=new Set();
+let retroPeriodKey=null;
+let selChartCat=null;
+
+function closeOv(id){document.getElementById(id).classList.remove('open');}
+function sw(t){tab=t;render();}
+function shift(d){cur=Math.max(-10,cur+d);render();}
+
+function mkSq(data,pk,cat,clickable){
+  const id=cat.id,bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id);
+  const eff=bgt+cr,p=pct(sp,eff>0?eff:bgt),s=scCls(sp,bgt);
+  let carryHtml=cr<-0.5?`<div class="sq-carry neg">▲ ${fm(Math.abs(cr))} deficit</div>`:cr>0.5?`<div class="sq-carry pos">▼ ${fm(cr)} surplus</div>`:`<div class="sq-carry none">No carry</div>`;
+  const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
+  const ca=clickable?`onclick="openCat('${id}')" `:'';
+  return`<div class="sq ${s}" ${ca}>
+    <div><div class="sq-hd"><span class="sq-name">${cat.label}</span><span class="sq-icon">${cat.icon}</span></div>
+    <div class="sq-main"><span class="spent">${fm(sp)}</span><span class="of"> of </span><span class="budget">${fm(bgt)}</span></div></div>
+    <div>${carryHtml}<div class="sq-overall">Overall: ${fm(totSp)} of ${fm(totBgt)}</div>
+    <div class="sq-bar"><div class="sq-fill ${s}" style="width:${p}%"></div></div></div>
+  </div>`;
+}
+
+function mkSavSq(s){
+  const cum=cumSav(s.weekly);
+  const cumEl=`<div class="sv-cum">≈${fm(cum)} since Jun 3</div>`;
+  const warnEl=s.warn?`<div class="sv-warn">⚠ ${s.warn}</div>`:'';
+  return`<div class="sv-sq">
+    <div><div class="sq-hd" style="margin-bottom:4px"><span class="sq-name">${s.label}</span></div>
+    <div class="sv-fnlbl">Per fortnight</div><div class="sv-fn">${fm(s.weekly*2)}</div></div>
+    <div><div class="sv-note">${s.note}</div>${cumEl}${warnEl}</div>
+  </div>`;
+}
+
+function render(){
+  const data=D(),pk=getPK(cur),isNow=cur===getCO();
+  const pdDate=new Date(pk+'T12:00:00');
+  const tracked=CATS.filter(c=>c.tracked),fixed=CATS.filter(c=>c.fixed);
+  let totAvail=0,totBgt=0,totSp=0;
+  tracked.forEach(c=>{totAvail+=avail(data,pk,c.id);totBgt+=fb(c.id);totSp+=ps(data,pk,c.id);});
+  const totSC=totAvail<0?'over':totAvail<totBgt*0.15?'warn':'ok';
+  const pdDate2=new Date(pk+'T12:00:00');
+  const activeSav=SAVINGS.filter(s=>s.phase==='always'||(s.phase==='until2027'&&pdDate2<=new Date('2027-12-31T00:00:00'))||(s.phase==='from2028'&&pdDate2>=new Date('2028-01-01T00:00:00')));
+  const cfg=getSyncCfg();
+  const syncConfigured=!!(cfg.apiKey&&cfg.binId);
+
+  let content='';
+  if(tab==='snapshot'){
+    const sq=tracked.map(c=>mkSq(data,pk,c,true)).join('');
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(totAvail)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div></div>
+    <div class="sec"><div class="sec-hd">Spending this fortnight</div><div class="sq-grid">${sq}</div></div>`;
+  }else if(tab==='fixed'){
+    const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
+    const fixTot=fixed.reduce((s,c)=>s+fb(c.id),0),fixSp=fixed.reduce((s,c)=>s+ps(data,pk,c.id),0);
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Budget this fn</div><div class="sc-val">${fm(fixTot)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(fixSp)}</div></div></div>
+    <div class="sec"><div class="ibox ibl" style="margin-bottom:10px"><p>Fixed costs that run automatically each fortnight — not actively managed day to day.</p></div>
+    <div class="sq-grid">${sq}</div></div>`;
+  }else if(tab==='savings'){
+    const savTot=activeSav.reduce((a,s)=>a+s.weekly*2,0);
+    const savCum=activeSav.filter(s=>s.phase!=='from2028').reduce((a,s)=>a+cumSav(s.weekly),0);
+    const sq=activeSav.map(s=>mkSavSq(s)).join('');
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Saving this fn</div><div class="sc-val" style="color:var(--B)">${fm(savTot)}</div></div><div class="scard"><div class="sc-lbl">Saved since Jun 3</div><div class="sc-val" style="color:var(--G)">≈${fm(savCum)}</div></div></div>
+    <div class="sec"><div class="sq-grid">${sq}</div>
+    <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip saving at $145.50/wk — target ~$12,000 by Dec 2027. From Jan 2028 the overseas 4yr fund starts at $144/wk.</p></div></div>`;
+  }else if(tab==='history'){
+    const periods=data.periods||{},pkeys=Object.keys(periods).sort().reverse();
+    const rows=pkeys.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:24px 0">No history yet</p>`:pkeys.map(k=>{
+      const idx=getPO(k),txs=(periods[k]?.transactions||[]).sort((a,b)=>b.date.localeCompare(a.date));
+      const tot=txs.filter(t=>CATS.find(c=>c.id===t.catId&&c.tracked)).reduce((s,t)=>s+t.amount,0);
+      const bgt=tracked.reduce((s,c)=>s+fb(c.id),0);
+      const cs=tot>bgt?'cov':tot>bgt*.85?'cwn':'cok';
+      const isExp=expandedPeriods.has(k);
+      const txRows=txs.map(t=>{const cat=CATS.find(c=>c.id===t.catId);return`<div class="htx-row"><div class="htx-cat">${cat?cat.icon:''} <span style="font-size:11px;color:var(--tx2)">${cat?cat.label:'?'}</span></div><div class="htx-desc">${t.description||t.catId}</div><div style="display:flex;align-items:center;gap:6px"><span class="htx-amt">-${fm2(t.amount)}</span><span style="font-size:10px;color:var(--tx3)">${fmtDate(t.date)}</span><button class="htx-del" onclick="histDelTx('${k}','${t.id}',event)">Del</button></div></div>`;}).join('');
+      return`<div class="hist-card"><div class="hist-banner" onclick="togglePeriod('${k}')"><div><div style="font-size:14px;font-weight:700">${getPL(idx)}</div><div style="font-size:12px;color:var(--tx2);margin-top:2px">${txs.length} transaction${txs.length!==1?'s':''}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="chip ${cs}">${fm(tot)}</span><span style="font-size:16px;color:var(--tx3);${isExp?'transform:rotate(180deg)':''}">⌄</span></div></div>${isExp?`<div class="htx-list">${txRows}<button class="htx-add-btn" onclick="openRetroAdd('${k}',event)">+ Add transaction to this period</button></div>`:''}</div>`;
+    }).join('');
+    content=`<div class="sec"><div class="sec-hd">All fortnights</div>${rows}</div>`;
+  }else if(tab==='chart'){
+    const allPks=Object.keys(data.periods||{}).sort();
+    if(!allPks.includes(getPK(getCO()))&&allPks.length>0)allPks.push(getPK(getCO()));
+    const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat||(chartCats[0]?.id||'groceries');
+    const selCat=chartCats.find(c=>c.id===selId)||chartCats[0];
+    const pts=allPks.map(pk=>{const idx=getPO(pk),sp=ps(data,pk,selId),bgt=fb(selId),lbl=getPL(idx).split(' – ')[0];return{pk,idx,sp,bgt,lbl};});
+    const maxV=Math.max(...pts.map(p=>Math.max(p.sp,p.bgt)),1);
+    const W=320,H=180,PT={t:16,r:12,b:48,l:52};
+    const cW=W-PT.l-PT.r,cH=H-PT.t-PT.b;
+    const x=i=>PT.l+i*(cW/(Math.max(pts.length-1,1)));
+    const y=v=>PT.t+cH-(v/maxV)*cH;
+    const bPath=pts.map((p,i)=>(i===0?'M':'L')+x(i).toFixed(1)+','+y(p.bgt).toFixed(1)).join(' ');
+    const sPath=pts.length>0?pts.map((p,i)=>(i===0?'M':'L')+x(i).toFixed(1)+','+y(p.sp).toFixed(1)).join(' '):'';
+    const yTicks=[0,.25,.5,.75,1].map(f=>({v:Math.round(maxV*f),y:y(maxV*f)}));
+    const opts=chartCats.map(c=>`<option value="${c.id}"${c.id===selId?' selected':''}>${c.icon} ${c.label}</option>`).join('');
+    const svgC=pts.length===0?`<div style="display:flex;align-items:center;justify-content:center;height:180px;color:var(--tx3);font-size:14px">No data yet</div>`:`<svg viewBox="0 0 ${W} ${H}" style="width:100%;overflow:visible;display:block">${yTicks.map(t=>`<line x1="${PT.l}" y1="${t.y.toFixed(1)}" x2="${W-PT.r}" y2="${t.y.toFixed(1)}" stroke="var(--br2)" stroke-width="1"/><text x="${PT.l-6}" y="${(t.y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--tx3)">$${t.v>=1000?(t.v/1000).toFixed(1)+'k':t.v}</text>`).join('')}${pts.map((l,i)=>`<text x="${x(i).toFixed(1)}" y="${(H-PT.b+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--tx3)" transform="rotate(-35,${x(i).toFixed(1)},${(H-PT.b+14).toFixed(1)})">${l.lbl}</text>`).join('')}<path d="${bPath}" fill="none" stroke="var(--B)" stroke-width="2" stroke-dasharray="5,3" opacity=".7"/><path d="${sPath}" fill="none" stroke="${pts.some(p=>p.sp>p.bgt)?'var(--R)':'var(--G)'}" stroke-width="2.5"/>${pts.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.sp).toFixed(1)}" r="4" fill="${p.sp>p.bgt?'var(--R)':'var(--G)'}"/>`).join('')}</svg>`;
+    content=`<div class="sec"><div class="sec-hd">Budgeted vs actual by fortnight</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px 14px 10px;margin-bottom:12px">
+      <div class="fg" style="margin-bottom:12px"><label class="fl">Category</label><select class="fi" onchange="selChartCat=this.value;render()">${opts}</select></div>
+      ${svgC}
+      <div style="display:flex;gap:16px;margin-top:10px;padding-top:8px;border-top:1px solid var(--br)"><div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2)"><svg width="20" height="4"><path d="M0,2 L20,2" stroke="var(--B)" stroke-width="2" stroke-dasharray="4,2"/></svg> Budget</div><div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2)"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="var(--G)" stroke-width="2.5"/></svg> Actual</div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">${pts.length===0?'<p style="font-size:13px;color:var(--tx3)">No data yet</p>':pts.map(p=>{const cs=p.sp>p.bgt?'cov':p.sp>p.bgt*.85?'cwn':'cok';return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--br);font-size:13px"><span style="color:var(--tx2)">${getPL(p.idx)}</span><span class="chip ${cs}">${fm(p.sp)} <span style="font-weight:400;opacity:.7">of ${fm(p.bgt)}</span></span></div>`;}).join('')}</div>
+    </div>`;
+  }else if(tab==='settings'){
+    const syncLabel=syncConfigured?cfg.gistId?`Connected (Gist: ${cfg.gistId.slice(-8)})`:`Connected`:'Not set up';
+    const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
+    content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:700">Status</span>
+        <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bin ID: ${cfg.binId||'none'}</div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
+    </div>
+    <div class="sec-hd">Import statement</div>
+    <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
+    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
+    <button class="bw" onclick="exportData()">💾 Export Backup</button>
+    </div>
+    <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
+      ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
+    </div></div>
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div>`;
+  }else if(tab==='guide'){
+    content=`<div class="sec">
+
+    <div class="isec" style="background:var(--Rbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Rtx);margin-bottom:8px">⚠ Google Drive won't open this file on iPhone</h3>
+      <p style="font-size:14px;color:var(--Rtx);line-height:1.7">Google Drive treats HTML files as raw code — it cannot run them as a webpage. Copying the Drive URL into Safari also just shows code. <strong>You need a real web URL</strong> to open this as an app. The solution below is free, takes 10 minutes, and works permanently on all devices.</p>
+    </div>
+
+    <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Btx);margin-bottom:10px">🚀 Step 1 — Publish to GitHub Pages (free, 10 mins)</h3>
+      <p style="font-size:13px;color:var(--Btx);margin-bottom:10px;line-height:1.6">GitHub Pages turns your HTML file into a real website with a permanent URL. You do this once on your computer.</p>
+      <ol style="list-style:none;padding:0">
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>On your computer, go to <strong>github.com</strong> and click <strong>Sign up</strong>. Use any email address. It's free — you don't need to pay for anything.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>Once logged in, click the <strong>+</strong> icon in the top-right corner → <strong>New repository</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>In the <strong>Repository name</strong> field type: <strong>budget</strong>. Set it to <strong>Public</strong>. Tick <strong>"Add a README file"</strong>. Click <strong>Create repository</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>You're now inside your repository. Click <strong>Add file → Upload files</strong>. Drag the file <strong>HB_v27.html</strong> into the upload area. Then click <strong>Commit changes</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap=10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">5</span><span>Click <strong>Settings</strong> (top menu of your repository, not your account). Scroll down to the section called <strong>Pages</strong> on the left sidebar.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">6</span><span>Under <strong>Branch</strong>, change it from "None" to <strong>main</strong>. Leave the folder as <strong>/ (root)</strong>. Click <strong>Save</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">7</span><span>Wait 2 minutes. Refresh the Pages settings page. You will see a green box that says: <strong>"Your site is live at https://YOURNAME.github.io/budget/"</strong></span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">8</span><span>Your actual tracker URL is: <strong>https://YOURNAME.github.io/budget/HB_v27.html</strong> — replace YOURNAME with your GitHub username. Open this on any device and it works.</span></li>
+      </ol>
+      <div style="background:rgba(255,255,255,0.3);border-radius:var(--rs);padding:10px;margin-top:8px">
+        <p style="font-size:13px;color:var(--Btx)"><strong>To update the file later</strong> (new version): go back to github.com → your budget repository → Add file → Upload files → upload the new HTML → Commit. The URL stays the same forever.</p>
+      </div>
+    </div>
+
+
+    <div class="isec" style="background:var(--Gbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Gtx);margin-bottom:10px">📱 Step 2 — Add to Home Screen on iPhone (Safari only)</h3>
+      <p style="font-size:13px;color:var(--Gtx);margin-bottom:10px;line-height:1.6"><strong>Do this on both iPhones</strong> once you have your GitHub URL.</p>
+      <ol style="list-style:none;padding:0">
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">1</span><span>Open <strong>Safari</strong> on your iPhone (not Chrome, not Google app — must be Safari)</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">2</span><span>Type or paste your URL (e.g. <strong>https://yourname.github.io/budget/HB_v27.html</strong>) into the address bar and load it</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">3</span><span>The tracker opens and looks like an app. Now tap the <strong>Share icon</strong> — it looks like a box with an arrow pointing up, at the bottom of your screen in the Safari toolbar</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">4</span><span>Scroll down in the share menu until you see <strong>Add to Home Screen</strong>. Tap it.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">5</span><span>Change the name to <strong>Budget</strong> and tap <strong>Add</strong> (top right). The app icon now appears on your home screen — tap it any time like a normal app.</span></li>
+      </ol>
+    </div>
+
+    <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Btx);margin-bottom:10px">☁️ Step 3 — Set Up Cloud Sync (GitHub)</h3>
+      <p style="font-size:13px;color:var(--Btx);margin-bottom:10px;line-height:1.6">Uses your existing GitHub account — no new accounts needed. Creates a private Gist to store your data. One person sets it up and shares the details with the others.</p>
+      <ol style="list-style:none;padding:0">
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>Go to <strong>github.com</strong> and log in with your existing account (demitrivoulgaropoulos-byte).</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>Click your <strong>profile picture</strong> in the top-right corner → click <strong>Settings</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>Scroll all the way down the left sidebar and click <strong>Developer settings</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>Click <strong>Personal access tokens</strong> → <strong>Tokens (classic)</strong> → <strong>Generate new token</strong> → <strong>Generate new token (classic)</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">5</span><span>In the <strong>Note</strong> field type <strong>Budget Sync</strong>. Set <strong>Expiration</strong> to <strong>No expiration</strong>. Scroll down and tick the box next to <strong>gist</strong>. Scroll to the bottom and click <strong>Generate token</strong>.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">6</span><span>A token appears starting with <strong>ghp_</strong>. <strong>Copy it immediately and save it in your iPhone Notes</strong> — GitHub only shows it once. You need this on all three devices.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">7</span><span>Open the Budget app → <strong>Settings</strong> → <strong>Set up cloud sync</strong>. Paste your token. Tap <strong>Connect</strong>. It creates a Gist and shows you a <strong>Gist ID</strong>. Save that too.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">8</span><span>On your wife's phone and the desktop: Settings → Set up cloud sync → paste token → tap <strong>"Already set up on another device? Enter Gist ID"</strong> → paste Gist ID → Connect. All devices now sync in real time.</span></li>
+      </ol>
+    </div>
+
+    <div class="isec"><h3>➕ Adding expenses day to day</h3><p>Tap the <strong>+</strong> button any time you spend money. Pick the category, enter the amount, add a description if you want. The transaction saves instantly and pushes to all other devices within 2 seconds. Tap any square on the Snapshot tab to see all transactions for that category and delete mistakes.</p></div>
+
+    <div class="isec"><h3>♻️ How carryover works</h3><p>Unspent budget rolls forward to the next fortnight automatically. If you spend less than your grocery budget this fortnight, you have more available next fortnight. Overspend carries forward as a deficit. Each square shows the current fortnight's spend vs budget, with a small note showing any surplus or deficit brought forward from previous fortnights.</p></div>
+
+    <div class="isec"><h3>📄 Monthly statement import (arrives 6th of each month)</h3>
+    <ol style="list-style:none;padding:0">
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">1</span><span>Open a new Claude chat at <strong>claude.ai</strong></span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">2</span><span>Type: <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF</span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">3</span><span>Copy the JSON Claude gives you</span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--tx2)"><span class="snum">4</span><span>In the tracker: <strong>Settings → Paste Statement JSON → Import</strong>. Transactions land in the correct fortnights automatically and sync to all devices.</span></li>
+    </ol></div>
+
+    <div class="isec"><h3>🏖 Holiday savings plan</h3>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px;display:grid;grid-template-columns:60px 1fr;gap:5px 10px;font-size:13px">
+        <span style="font-weight:700">2027</span><span style="color:var(--tx2)">Local $7k + Xmas overseas $18.5k <span style="color:var(--R)">⚠ currently saving $200/wk — approx $2k short of target, top up when possible</span></span>
+        <span style="font-weight:700">2028</span><span style="color:var(--tx2)">No holiday — rest &amp; save</span>
+        <span style="font-weight:700">2029</span><span style="color:var(--tx2)">Local holiday $7,000</span>
+        <span style="font-weight:700">2030</span><span style="color:var(--tx2)">Overseas $30,000</span>
+      </div>
+    </div>
+    </div>`;
+  }else if(tab==='settings'){
+    const syncLabel=syncConfigured?cfg.gistId?`Connected (Gist: ${cfg.gistId.slice(-8)})`:`Connected`:'Not set up';
+    const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
+    content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:700">Status</span>
+        <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bin ID: ${cfg.binId||'none'}</div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
+    </div>
+    <div class="sec-hd">Import statement</div>
+    <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
+    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
+    <button class="bw" onclick="exportData()">💾 Export Backup</button>
+    </div>
+    <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
+      ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
+    </div></div>
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div>`;
+  }else if(tab==='guide'){
+    content=`<div class="sec">
+    <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:20px">
+      <h3 style="color:var(--Btx);margin-bottom:10px">📱 iPhone Setup — Start Here</h3>
+      <div class="ibox" style="background:rgba(255,255,255,0.3);margin-bottom:10px"><p style="color:var(--Btx)"><strong>⚠ Use Safari, not Chrome.</strong> Chrome stores data separately and will not sync with your other devices.</p></div>
+      <ol style="list-style:none;padding:0">
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>On your computer, go to <strong>drive.google.com → + New → File upload</strong> and upload <strong>HB_v27.html</strong></span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>On iPhone, open the <strong>Google Drive app</strong> → find the file → tap <strong>⋯</strong> → <strong>Open with → Safari</strong></span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>In Safari tap the <strong>Share icon</strong> (box with arrow at bottom) → <strong>Add to Home Screen</strong> → name it <strong>Budget</strong> → tap Add</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>Open the Budget icon from your home screen. Go to <strong>Settings → Set up cloud sync</strong> and enter your JSONBin API key. Your wife does the same on her phone using the same key and Bin ID.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">5</span><span>Once cloud sync is connected, all three devices (both iPhones + desktop) will share the same live data automatically.</span></li>
+      </ol>
+    </div>
+    <div class="isec" style="background:var(--Gbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:20px">
+      <h3 style="color:var(--Gtx);margin-bottom:8px">☁️ Cloud Sync — How It Works</h3>
+      <p style="font-size:14px;color:var(--Gtx);line-height:1.7;margin-bottom:6px">Uses <strong>GitHub Gist</strong> — stored directly in your own GitHub account. No third-party services, no limits, completely free forever.</p>
+      <ul style="padding-left:18px">
+        <li style="font-size:14px;color:var(--Gtx);margin-bottom:4px">Any transaction added on any device syncs to all others within 2 seconds</li>
+        <li style="font-size:14px;color:var(--Gtx);margin-bottom:4px">Monthly statement imports also sync automatically</li>
+        <li style="font-size:14px;color:var(--Gtx);margin-bottom:4px">Works offline — syncs when you reconnect</li>
+        <li style="font-size:14px;color:var(--Gtx)">Data is private and owned by you — only people with your token can access it</li>
+      </ul>
+    </div>
+    <div class="isec"><h3>➕ Adding expenses</h3><p>Tap <strong>+</strong> any time you spend. Pick category, enter amount. All devices see it within seconds once synced.</p></div>
+    <div class="isec"><h3>♻️ Carryover</h3><p>Unspent rolls forward, overspend carries as a deficit. Each square shows spend this fortnight vs budget, with a deficit/surplus note and overall total since Jun 3.</p></div>
+    <div class="isec"><h3>📄 Monthly statement import (6th of each month)</h3><ol style="list-style:none;padding:0">
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">1</span><span>New Claude chat → <em>"Process my statement for budget tracker – export as JSON"</em> + attach PDF</span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">2</span><span>Copy the JSON Claude provides</span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--tx2)"><span class="snum">3</span><span>Tracker: <strong>Settings → Paste Statement JSON → Import</strong> — syncs to all devices</span></li>
+    </ol></div>
+    <div class="isec"><h3>🏖 Holiday savings plan</h3>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px;display:grid;grid-template-columns:60px 1fr;gap:5px 10px;font-size:13px">
+        <span style="font-weight:700">2027</span><span style="color:var(--tx2)">Local $7k + Xmas overseas $18.5k (⚠ saving $200/wk — top up if possible)</span>
+        <span style="font-weight:700">2028</span><span style="color:var(--tx2)">No holiday — rest &amp; save</span>
+        <span style="font-weight:700">2029</span><span style="color:var(--tx2)">Local holiday $7,000</span>
+        <span style="font-weight:700">2030</span><span style="color:var(--tx2)">Overseas $30,000</span>
+      </div>
+    </div></div>`;
+  }
+
+  document.getElementById('app').innerHTML=`
+    <div class="hdr">
+      <div class="hdr-top">
+        <div class="hdr-titles"><h1>Family Budget</h1><div class="h-sub">From 3 June 2026</div></div>
+        <div class="hdr-right">
+          <span class="bdg ${isNow?'bdg-now':'bdg-past'}">${isNow?'Current':cur<getCO()?'Past':'Future'}</span>
+          <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
+        </div>
+      </div>
+      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button></div>
+    </div>
+    <div class="tabs">
+      <div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Snapshot</div>
+      <div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div>
+      <div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div>
+      <div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div>
+      <div class="tab ${tab==='chart'?'on':''}" onclick="sw('chart')">Chart</div>
+      <div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div>
+      <div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div>
+    </div>
+    ${content}`;
+  rebuildCG();
+}
+
+function rebuildCG(){
+  const g=document.getElementById('cg');if(!g)return;
+  g.innerHTML=CATS.filter(c=>c.tracked).map(c=>`<div class="co${sel===c.id?' sel':''}" onclick="pickC('${c.id}')">${c.icon}<br>${c.label}</div>`).join('');
+}
+function pickC(id){sel=id;rebuildCG();}
+
+function openAdd(){
+  sel=null;document.getElementById('amt').value='';document.getElementById('desc').value='';
+  document.getElementById('addOv').classList.add('open');rebuildCG();
+  setTimeout(()=>document.getElementById('amt').focus(),150);
+}
+function saveExp(){
+  const amt=parseFloat(document.getElementById('amt').value);
+  const desc=document.getElementById('desc').value.trim()||sel;
+  if(!sel){alert('Pick a category');return;}
+  if(!amt||amt<=0){alert('Enter a valid amount');return;}
+  const data=D(),pk=retroPeriodKey||getPK(cur);
+  const isRetro=!!retroPeriodKey;retroPeriodKey=null;
+  if(!data.periods[pk])data.periods[pk]={transactions:[]};
+  const txDate=isRetro?pk:new Date().toISOString().slice(0,10);
+  const tx={id:Date.now(),catId:sel,amount:Math.round(amt*100)/100,description:desc,date:txDate,_ts:Date.now()};
+  data.periods[pk].transactions.push(tx);
+  saveLocal(data);closeOv('addOv');schedulePush();render();
+}
+
+function openCat(id){
+  const cat=CATS.find(c=>c.id===id),data=D(),pk=getPK(cur);
+  const txs=((data.periods||{})[pk]?.transactions||[]).filter(t=>t.catId===id);
+  const bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id),av=bgt+cr-sp;
+  const s=av<0?'over':av<bgt*0.2?'warn':'ok';
+  const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
+  const txHtml=txs.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:16px 0">No transactions this fortnight</p>`:txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="tx-item"><div><div class="tx-d">${t.description}</div><div class="tx-m">${fmtDate(t.date)}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="tx-a">-${fm2(t.amount)}</span><button class="tx-del" onclick="delTx('${pk}','${t.id}')">Del</button></div></div>`).join('');
+  document.getElementById('catTitle').textContent=`${cat.icon} ${cat.label}`;
+  document.getElementById('catBody').innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div class="stat3"><div class="s3l">This fn</div><div class="s3v">${fm(bgt)}</div></div>
+      <div class="stat3"><div class="s3l">Carry</div><div class="s3v" style="color:${cr>=0?'var(--G)':'var(--R)'}">${cr>=0?'+':'-'}${fm(Math.abs(cr))}</div></div>
+      <div class="stat3"><div class="s3l">Available</div><div class="s3v ${s}">${av<0?'-':''}${fm(Math.abs(av))}</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">Overall: ${fm(totSp)} spent of ${fm(totBgt)} budget since Jun 3</div>
+    <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Transactions</div>
+    ${txHtml}
+    <button class="bw" style="margin-top:14px" onclick="closeOv('catOv');sel='${id}';openAdd()">+ Add transaction</button>
+    <button class="bw" onclick="closeOv('catOv')">Close</button>`;
+  document.getElementById('catOv').classList.add('open');
+}
+
+async function delTx(pk,id){
+  const data=D();
+  if(data.periods&&data.periods[pk]){
+    data.periods[pk].transactions=data.periods[pk].transactions.filter(
+      t=>String(t.id)!==String(id)&&Number(t.id)!==Number(id)
+    );
+  }
+  saveLocal(data);
+  clearTimeout(syncTimer);
+  await cloudPut(data);
+  setSyncStatus('ok');
+  closeOv('catOv');render();
+}
+
+function togglePeriod(pk){if(expandedPeriods.has(pk))expandedPeriods.delete(pk);else expandedPeriods.add(pk);render();}
+async function histDelTx(pk,id,e){
+  e.stopPropagation();
+  e.preventDefault();
+  const data=D();
+  if(data.periods&&data.periods[pk]){
+    data.periods[pk].transactions=data.periods[pk].transactions.filter(
+      t=>String(t.id)!==String(id)&&Number(t.id)!==Number(id)
+    );
+  }
+  saveLocal(data);
+  clearTimeout(syncTimer);
+  await cloudPut(data);
+  setSyncStatus('ok');
+  render();
+}
+function openRetroAdd(pk,e){
+  e.stopPropagation();retroPeriodKey=pk;sel=null;
+  document.getElementById('amt').value='';document.getElementById('desc').value='';
+  document.getElementById('addOv').classList.add('open');rebuildCG();
+  setTimeout(()=>document.getElementById('amt').focus(),150);
+}
+
+function doImport(){
+  const raw=document.getElementById('impJson').value.trim();
+  try{
+    const p=JSON.parse(raw),txs=p.transactions||p;
+    if(!Array.isArray(txs))throw new Error('Expected array');
+    const data=D();let n=0;
+    txs.forEach(t=>{
+      const norm=s=>(s||'').toLowerCase().replace(/[\s\/&\-]/g,'');
+      const m=CATS.find(c=>norm(c.label)===norm(t.category)||c.id===norm(t.category));
+      if(!m)return;
+      const pk=getPK(getPO(t.date));
+      if(!data.periods[pk])data.periods[pk]={transactions:[]};
+      data.periods[pk].transactions.push({id:Date.now()+n++,catId:m.id,amount:Math.round(parseFloat(t.amount)*100)/100,description:t.description||m.label,date:t.date,_ts:Date.now()});
+    });
+    saveLocal(data);closeOv('impOv');schedulePush();alert(`Imported ${n} transactions`);render();
+  }catch(e){alert('Import failed: '+e.message);}
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(D(),null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='budget_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+async function confirmReset(){
+  if(!confirm('Clear all transaction data?\n\nThis removes all transactions from this device and the cloud. Cannot be undone.'))return;
+  const empty={periods:{}};
+  localStorage.setItem(SK,JSON.stringify(empty));
+  // Push empty data to cloud immediately so other devices also clear
+  const cfg=getSyncCfg();
+  if(cfg.token&&cfg.gistId){
+    setSyncStatus('ing');
+    const ok=await cloudPut(empty);
+    setSyncStatus(ok?'ok':'off');
+  }
+  render();
+  alert('✅ All transaction data cleared.');
+}
+
+document.addEventListener('click',e=>{document.querySelectorAll('.ov').forEach(o=>{if(e.target===o)o.classList.remove('open');});});
+
+async function manualSync(){
+  setSyncStatus('ing');
+  await syncNow();
+  render();
+  alert(syncState==='ok'?'✅ Sync successful! All devices are up to date.':'❌ Sync failed. Check your internet connection and try again.');
+}
+
+async function fixSync(){
+  if(!confirm('This will create a brand new Gist and reconnect all devices.\n\nYou will need to re-enter the new Gist ID on your wife\'s phone afterwards.\n\nContinue?'))return;
+  const cfg=getSyncCfg();
+  if(!cfg.token){alert('No GitHub token found. Please use Set up cloud sync first.');return;}
+  setSyncStatus('ing');render();
+  try{
+    const local=loadRaw();
+    const gistId=await cloudCreateGist(cfg.token);
+    if(!gistId){alert('Failed to create Gist. Check your token and internet connection.');setSyncStatus('off');return;}
+    await cloudPut(local);
+    setSyncCfg({token:cfg.token,gistId});
+    setSyncStatus('ok');render();
+    alert('✅ New Gist created!\n\nGist ID: '+gistId+'\n\n--- NEXT STEPS ---\nOn your wife\'s iPhone:\n1. Open Budget app\n2. Settings → Set up cloud sync\n3. Enter the same GitHub token\n4. Tap "Already set up on another device"\n5. Enter this Gist ID: '+gistId+'\n6. Tap Connect\n\nSave this Gist ID somewhere safe.');
+  }catch(e){alert('Error: '+e.message);setSyncStatus('off');}
+  render();
+}
+
+window.onload=async function(){
+  // On load: pull from cloud once and merge, then local is source of truth
+  render();
+  await syncNow();
+  render();
+  // Every 3 minutes: push local state to cloud (no pull, no merge)
+  // This means other devices see updates on their next load or manual sync
+  setInterval(()=>pushOnly(), 180000);
+};
+
+async function pushOnly(){
+  const cfg=getSyncCfg();
+  if(!cfg.token||!cfg.gistId)return;
+  if(isSyncing)return;
+  setSyncStatus('ing');
+  const ok=await cloudPut(loadRaw());
+  setSyncStatus(ok?'ok':'off');
+}
+</script>
+</body>
+</html>
