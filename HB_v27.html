@@ -356,19 +356,21 @@ function getPL(o){
   const e=new Date(s);e.setDate(e.getDate()+13);
   return`${s.toLocaleDateString('en-AU',{day:'numeric',month:'short'})} – ${e.toLocaleDateString('en-AU',{day:'numeric',month:'short'})}`;
 }
-function getCO(){return Math.floor(Math.floor((new Date()-PS)/864e5)/14);}
+function getCO(){return Math.max(0,Math.floor(Math.floor((new Date()-PS)/864e5)/14));}
 function fb(id){const c=CATS.find(x=>x.id===id);return c?c.weekly*2:0;}
 function ps(data,pk,id){return((data.periods||{})[pk]?.transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0);}
 function carry(data,pk,id){
   let c=0;
+  const spk=getPK(0);
   for(const k of Object.keys(data.periods||{}).sort()){
+    if(k<spk)continue; // ignore pre-start periods
     if(k>=pk)break;
     c+=fb(id)-((data.periods[k].transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0));
   }
   return c;
 }
 function avail(data,pk,id){return fb(id)+carry(data,pk,id)-ps(data,pk,id);}
-function totalSpentAll(data,id){return Object.values(data.periods||{}).reduce((s,p)=>s+((p.transactions||[]).filter(t=>t.catId===id).reduce((a,t)=>a+t.amount,0)),0);}
+function totalSpentAll(data,id){const spk=getPK(0);return Object.entries(data.periods||{}).filter(([k])=>k>=spk).reduce((s,[,p])=>s+((p.transactions||[]).filter(t=>t.catId===id).reduce((a,t)=>a+t.amount,0)),0);}
 function totalBudgetAll(id,viewOffset){
   // Budget accumulates one fortnightly allocation per fortnight
   // Use the viewed period offset so navigating forward shows increasing totals
@@ -394,7 +396,7 @@ let selChartCat=null;
 
 function closeOv(id){document.getElementById(id).classList.remove('open');}
 function sw(t){tab=t;render();}
-function shift(d){cur=Math.max(-10,cur+d);render();}
+function shift(d){cur=Math.max(0,cur+d);render();}
 
 function mkSq(data,pk,cat,clickable){
   const id=cat.id,bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id);
@@ -452,7 +454,7 @@ function render(){
     <div class="sec"><div class="sq-grid">${sq}</div>
     <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip saving at $145.50/wk — target ~$12,000 by Dec 2027. From Jan 2028 the overseas 4yr fund starts at $144/wk.</p></div></div>`;
   }else if(tab==='history'){
-    const periods=data.periods||{},pkeys=Object.keys(periods).sort().reverse();
+    const startPK=getPK(0),periods=data.periods||{},pkeys=Object.keys(periods).filter(k=>k>=startPK).sort().reverse();
     const rows=pkeys.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:24px 0">No history yet</p>`:pkeys.map(k=>{
       const idx=getPO(k),txs=(periods[k]?.transactions||[]).sort((a,b)=>b.date.localeCompare(a.date));
       const tot=txs.filter(t=>CATS.find(c=>c.id===t.catId&&c.tracked)).reduce((s,t)=>s+t.amount,0);
@@ -464,7 +466,7 @@ function render(){
     }).join('');
     content=`<div class="sec"><div class="sec-hd">All fortnights</div>${rows}</div>`;
   }else if(tab==='chart'){
-    const allPks=Object.keys(data.periods||{}).sort();
+    const startPK2=getPK(0),allPks=Object.keys(data.periods||{}).filter(k=>k>=startPK2).sort();
     if(!allPks.includes(getPK(getCO()))&&allPks.length>0)allPks.push(getPK(getCO()));
     const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat||(chartCats[0]?.id||'groceries');
     const selCat=chartCats.find(c=>c.id===selId)||chartCats[0];
