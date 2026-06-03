@@ -153,36 +153,36 @@ const PS=new Date('2026-06-03T00:00:00');
 const TS=new Date('2026-06-03T00:00:00');
 
 const CATS=[
-  {id:'groceries',  label:'Groceries',        icon:'🛒',weekly:575, tracked:true},
-  {id:'eatingout',  label:'Eating Out',       icon:'🍽',weekly:70,  tracked:true},
-  {id:'alcohol',    label:'Alcohol',          icon:'🍷',weekly:35,  tracked:true},
-  {id:'gifts',      label:'Gifts',            icon:'🎁',weekly:29,  tracked:true},
-  {id:'clothes',    label:'Clothes',          icon:'👕',weekly:68,  tracked:true},
-  {id:'beauty',     label:'Beauty',           icon:'💅',weekly:70,  tracked:true},
-  {id:'house',      label:'House Purchases',  icon:'🏠',weekly:50,  tracked:true},
-  {id:'entertain',  label:'Going Out',        icon:'🎭',weekly:30,  tracked:true},
-  {id:'uber',       label:'Uber / Taxi',      icon:'🚗',weekly:30,  tracked:true},
-  {id:'petcare',    label:'Pet Care',         icon:'🐾',weekly:17.5,tracked:true},
-  {id:'pttolls',    label:'PT/Tolls/Parking', icon:'🚌',weekly:23,  tracked:true},
-  {id:'treat',      label:'Treat',            icon:'✨',weekly:12.5,tracked:true},
-  {id:'kidsschool', label:'Kids School',      icon:'📚',weekly:72, tracked:false,fixed:true},
-  {id:'kidssports', label:'Kids Sports',      icon:'⚽',weekly:68, tracked:false,fixed:true},
-  {id:'personalsubs',label:'Subscriptions',   icon:'📱',weekly:15, tracked:false,fixed:true},
-  {id:'pocketmoney',label:'Pocket Money',     icon:'💰',weekly:20, tracked:false,fixed:true},
-  {id:'funeralfund',label:'Funeral Fund',     icon:'🕯',weekly:50, tracked:false,fixed:true},
-  {id:'ato',        label:'ATO',              icon:'🏛',weekly:13, tracked:false,fixed:true},
-  {id:'accountant', label:'Tax Accountant',   icon:'📋',weekly:4,  tracked:false,fixed:true},
-  {id:'pestcontrol',label:'Pest Control',     icon:'🪲',weekly:4,  tracked:false,fixed:true},
-  {id:'unionfees',  label:'Union / Donations',icon:'🤝',weekly:23, tracked:false,fixed:true},
-  {id:'petrolcar',  label:'Petrol / Car',     icon:'⛽',weekly:55, tracked:false,fixed:true},
+  {id:'groceries',  label:'Groceries',        icon:'🛒',weekly:550,  tracked:true},
+  {id:'eatingout',  label:'Eating Out',        icon:'🍽',weekly:70,   tracked:true},
+  {id:'alcohol',    label:'Alcohol',           icon:'🍷',weekly:35,   tracked:true},
+  {id:'gifts',      label:'Gifts',             icon:'🎁',weekly:35,   tracked:true},
+  {id:'clothes',    label:'Clothes',           icon:'👕',weekly:65,   tracked:true},
+  {id:'beauty',     label:'Beauty',            icon:'💅',weekly:70,   tracked:true},
+  {id:'house',      label:'House Purchases',   icon:'🏠',weekly:50,   tracked:true},
+  {id:'entertain',  label:'Going Out',         icon:'🎭',weekly:25,   tracked:true},
+  {id:'uber',       label:'Uber / Taxi',       icon:'🚗',weekly:25,   tracked:true},
+  {id:'petcare',    label:'Pet Care',          icon:'🐾',weekly:17.5, tracked:true},
+  {id:'pttolls',    label:'PT/Tolls/Parking',  icon:'🚌',weekly:23,   tracked:true},
+  {id:'petrolcar',  label:'Petrol / Car',      icon:'⛽',weekly:55,   tracked:true},
+  {id:'kidsschool', label:'Kids School',       icon:'📚',weekly:72,   tracked:false,fixed:true},
+  {id:'kidssports', label:'Kids Sports',       icon:'⚽',weekly:60,   tracked:false,fixed:true},
+  {id:'personalsubs',label:'Subscriptions',    icon:'📱',weekly:10,   tracked:false,fixed:true},
+  {id:'pocketmoney',label:'Pocket Money',      icon:'💰',weekly:20,   tracked:false,fixed:true},
+  {id:'funeralfund',label:'Funeral Fund',      icon:'🕯',weekly:40,   tracked:false,fixed:true},
+  {id:'ato',        label:'ATO',               icon:'🏛',weekly:13,   tracked:false,fixed:true},
+  {id:'accountant', label:'Tax Accountant',    icon:'📋',weekly:4,    tracked:false,fixed:true},
+  {id:'pestcontrol',label:'Pest Control',      icon:'🪲',weekly:4,    tracked:false,fixed:true},
+  {id:'unionfees',  label:'Union / Donations', icon:'🤝',weekly:23,   tracked:false,fixed:true},
+  {id:'medical',    label:'Medical',           icon:'🏥',weekly:100,  tracked:false,fixed:true},
 ];
 
 const SAVINGS=[
-  {id:'overseas2027',label:'Xmas 2027 OS Trip', weekly:145.5,note:'Target ~$12,000 by Dec 2027',phase:'until2027'},
-  {id:'inheritance', label:"Kids' Shares",       weekly:163.5,note:'Target $8,500/yr · into investment shares',phase:'always'},
-  {id:'emergency',   label:'Emergency Fund',     weekly:60,   note:'$3,120/yr – shock absorber',phase:'always'},
-  {id:'renovation',  label:'Renovation Fund',    weekly:38,   note:'$1,976/yr for repairs & appliances',phase:'always'},
-  {id:'localholiday',label:'Local Holiday',      weekly:62,   note:'$7,500 every 2 years (saves ~$6,400 per cycle)',phase:'always'},
+  {id:'overseas2027',label:'Xmas 2027 OS Trip', weekly:100,  note:'Target ~$8,200 by Dec 2027',phase:'until2027'},
+  {id:'inheritance', label:"Kids' Shares",       weekly:140,  note:'Target $7,280/yr · into investment shares',phase:'always'},
+  {id:'emergency',   label:'Emergency Fund',     weekly:50,   note:'$2,600/yr – shock absorber',phase:'always'},
+  {id:'renovation',  label:'Renovation Fund',    weekly:30,   note:'$1,560/yr for repairs',phase:'always'},
+  {id:'localholiday',label:'Local Holiday',      weekly:60,   note:'$7,500 every 2 years',phase:'always'},
   {id:'overseas4yr', label:'Overseas Holiday',   weekly:144,  note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
 ];
 
@@ -439,12 +439,12 @@ function render(){
   if(tab==='snapshot'){
     const sq=tracked.map(c=>mkSq(data,pk,c,true)).join('');
     content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(totAvail)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div></div>
-    <div class="sec"><div class="sec-hd">Spending this fortnight</div><div class="sq-grid">${sq}</div></div>`;
+    <div class="sec"><div class="sec-hd">Essential spend this fortnight</div><div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='fixed'){
     const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
     const fixTot=fixed.reduce((s,c)=>s+fb(c.id),0),fixSp=fixed.reduce((s,c)=>s+ps(data,pk,c.id),0);
     content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Budget this fn</div><div class="sc-val">${fm(fixTot)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(fixSp)}</div></div></div>
-    <div class="sec"><div class="ibox ibl" style="margin-bottom:10px"><p>Fixed costs that run automatically each fortnight — not actively managed day to day.</p></div>
+    <div class="sec"><div class="ibox ibl" style="margin-bottom:10px"><p>Fixed costs that run automatically each fortnight. These do not need daily tracking — import statements monthly to review actuals.</p></div>
     <div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='savings'){
     const savTot=activeSav.reduce((a,s)=>a+s.weekly*2,0);
@@ -664,7 +664,7 @@ function render(){
       <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button></div>
     </div>
     <div class="tabs">
-      <div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Snapshot</div>
+      <div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div>
       <div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div>
       <div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div>
       <div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div>
