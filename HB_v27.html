@@ -174,7 +174,7 @@ const CATS=[
   {id:'accountant', label:'Tax Accountant',    icon:'📋',weekly:4,    tracked:false,fixed:true},
   {id:'pestcontrol',label:'Pest Control',      icon:'🪲',weekly:4,    tracked:false,fixed:true},
   {id:'unionfees',  label:'Union / Donations', icon:'🤝',weekly:23,   tracked:false,fixed:true},
-  {id:'medical',    label:'Medical',           icon:'🏥',weekly:100,  tracked:false,fixed:true},
+  {id:'medical',    label:'Medical',           icon:'🏥',weekly:100,  tracked:true},
 ];
 
 const SAVINGS=[
@@ -470,7 +470,7 @@ function render(){
     if(!allPks.includes(getPK(getCO()))&&allPks.length>0)allPks.push(getPK(getCO()));
     const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat||(chartCats[0]?.id||'groceries');
     const selCat=chartCats.find(c=>c.id===selId)||chartCats[0];
-    const pts=allPks.map(pk=>{const idx=getPO(pk),sp=ps(data,pk,selId),bgt=fb(selId),lbl=getPL(idx).split(' – ')[0];return{pk,idx,sp,bgt,lbl};});
+    const pts=allPks.map(pk=>{const idx=getPO(pk),sp=selId==='all'?chartCats.reduce((s,c)=>s+ps(data,pk,c.id),0):ps(data,pk,selId),bgt=selId==='all'?chartCats.reduce((s,c)=>s+fb(c.id),0):fb(selId),lbl=getPL(idx).split(' – ')[0];return{pk,idx,sp,bgt,lbl};});
     const maxV=Math.max(...pts.map(p=>Math.max(p.sp,p.bgt)),1);
     const W=320,H=180,PT={t:16,r:12,b:48,l:52};
     const cW=W-PT.l-PT.r,cH=H-PT.t-PT.b;
@@ -479,7 +479,7 @@ function render(){
     const bPath=pts.map((p,i)=>(i===0?'M':'L')+x(i).toFixed(1)+','+y(p.bgt).toFixed(1)).join(' ');
     const sPath=pts.length>0?pts.map((p,i)=>(i===0?'M':'L')+x(i).toFixed(1)+','+y(p.sp).toFixed(1)).join(' '):'';
     const yTicks=[0,.25,.5,.75,1].map(f=>({v:Math.round(maxV*f),y:y(maxV*f)}));
-    const opts=chartCats.map(c=>`<option value="${c.id}"${c.id===selId?' selected':''}>${c.icon} ${c.label}</option>`).join('');
+    const opts='<option value="all"'+(selId==='all'?' selected':'')+'>📊 All Categories Combined</option>'+chartCats.map(c=>`<option value="${c.id}"${c.id===selId?' selected':''}>${c.icon} ${c.label}</option>`).join('');
     const svgC=pts.length===0?`<div style="display:flex;align-items:center;justify-content:center;height:180px;color:var(--tx3);font-size:14px">No data yet</div>`:`<svg viewBox="0 0 ${W} ${H}" style="width:100%;overflow:visible;display:block">${yTicks.map(t=>`<line x1="${PT.l}" y1="${t.y.toFixed(1)}" x2="${W-PT.r}" y2="${t.y.toFixed(1)}" stroke="var(--br2)" stroke-width="1"/><text x="${PT.l-6}" y="${(t.y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--tx3)">$${t.v>=1000?(t.v/1000).toFixed(1)+'k':t.v}</text>`).join('')}${pts.map((l,i)=>`<text x="${x(i).toFixed(1)}" y="${(H-PT.b+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--tx3)" transform="rotate(-35,${x(i).toFixed(1)},${(H-PT.b+14).toFixed(1)})">${l.lbl}</text>`).join('')}<path d="${bPath}" fill="none" stroke="var(--B)" stroke-width="2" stroke-dasharray="5,3" opacity=".7"/><path d="${sPath}" fill="none" stroke="${pts.some(p=>p.sp>p.bgt)?'var(--R)':'var(--G)'}" stroke-width="2.5"/>${pts.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.sp).toFixed(1)}" r="4" fill="${p.sp>p.bgt?'var(--R)':'var(--G)'}"/>`).join('')}</svg>`;
     content=`<div class="sec"><div class="sec-hd">Budgeted vs actual by fortnight</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px 14px 10px;margin-bottom:12px">
@@ -490,6 +490,83 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">${pts.length===0?'<p style="font-size:13px;color:var(--tx3)">No data yet</p>':pts.map(p=>{const cs=p.sp>p.bgt?'cov':p.sp>p.bgt*.85?'cwn':'cok';return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--br);font-size:13px"><span style="color:var(--tx2)">${getPL(p.idx)}</span><span class="chip ${cs}">${fm(p.sp)} <span style="font-weight:400;opacity:.7">of ${fm(p.bgt)}</span></span></div>`;}).join('')}</div>
     </div>`;
   }else if(tab==='settings'){
+    const syncLabel=syncConfigured?cfg.gistId?`Connected (Gist: ${cfg.gistId.slice(-8)})`:`Connected`:'Not set up';
+    const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
+    content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:700">Status</span>
+        <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
+    </div>
+    <div class="sec-hd">Import statement</div>
+    <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
+    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
+    <button class="bw" onclick="exportData()">💾 Export Backup</button>
+    </div>
+    <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
+      ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
+    </div></div>
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div>`;
+  }else if(tab==='guide'){
+    content=`<div class="sec">
+
+    <div class="isec"><h3>➕ Adding expenses day to day</h3><p style="font-size:14px;color:var(--tx2);line-height:1.7">Tap <strong style="color:var(--tx)">+</strong> any time you spend. Pick category, enter amount, add description. Saves instantly and syncs to all devices. Tap any square to see transactions and delete mistakes.</p></div>
+
+    <div class="isec"><h3>♻️ How carryover works</h3><p style="font-size:14px;color:var(--tx2);line-height:1.7">Unspent budget rolls forward automatically each fortnight. Overspend carries as a deficit. Each square shows spend vs budget this fortnight plus any carry from prior fortnights.</p></div>
+
+    <div class="isec"><h3>📄 Monthly statement import (6th of each month)</h3>
+    <ol style="list-style:none;padding:0">
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">1</span><span>New Claude chat at <strong style="color:var(--tx)">claude.ai</strong> → attach PDF → type <em>"Process my statement for budget tracker – export as JSON"</em></span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:var(--tx2)"><span class="snum">2</span><span>Copy the JSON Claude returns</span></li>
+      <li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--tx2)"><span class="snum">3</span><span><strong style="color:var(--tx)">Settings → Paste Statement JSON → Import</strong> — transactions land in correct fortnights and sync to all devices</span></li>
+    </ol></div>
+
+    <div class="isec"><h3>🏖 Holiday savings plan</h3>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px;display:grid;grid-template-columns:60px 1fr;gap:5px 10px;font-size:13px">
+        <span style="font-weight:700">2027</span><span style="color:var(--tx2)">Local ~$3,120 + Xmas overseas ~$8,200 ($100/wk)</span>
+        <span style="font-weight:700">2028</span><span style="color:var(--tx2)">No holiday — rest &amp; save</span>
+        <span style="font-weight:700">2029</span><span style="color:var(--tx2)">Local $7,500</span>
+        <span style="font-weight:700">2030</span><span style="color:var(--tx2)">Overseas $30,000</span>
+      </div>
+    </div>
+
+    <div class="isec" style="background:var(--Rbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Rtx);margin-bottom:8px">⚠ Google Drive won't open this file on iPhone</h3>
+      <p style="font-size:14px;color:var(--Rtx);line-height:1.7">Google Drive shows raw HTML code — it cannot run the app. Open it via Safari using the GitHub Pages URL instead.</p>
+      <p style="font-size:12px;font-weight:700;color:var(--Rtx);margin-top:6px;word-break:break-all">https://DEJAVOU1.github.io/budget/HB_v27.html</p>
+    </div>
+
+    <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Btx);margin-bottom:10px">📱 iPhone — Add to Home Screen (Safari only)</h3>
+      <ol style="list-style:none;padding:0">
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>Open <strong>Safari</strong> → go to the URL above</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>Tap <strong>Share icon</strong> (box with arrow) → <strong>Add to Home Screen</strong> → name it <strong>Budget</strong> → Add</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>Budget icon on home screen — opens like a native app</span></li>
+      </ol>
+    </div>
+
+    <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:16px">
+      <h3 style="color:var(--Btx);margin-bottom:10px">☁️ Cloud Sync Setup</h3>
+      <ol style="list-style:none;padding:0">
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span><strong>Settings → Set up cloud sync</strong></span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>Paste your GitHub Personal Access Token (saved in your Notes app)</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>Tap <strong>Already set up? Enter Gist ID</strong> → paste your Gist ID (saved in your Notes app)</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>Tap <strong>Connect</strong> — green dot = synced ✓</span></li>
+      </ol>
+    </div>
+
+    <div class="isec" style="background:var(--Gbg);border-radius:var(--rad);padding:14px 16px">
+      <h3 style="color:var(--Gtx);margin-bottom:8px">🔄 Updating the app</h3>
+      <p style="font-size:13px;color:var(--Gtx);line-height:1.7">Download new HB_v27.html → <strong>github.com/DEJAVOU1/budget</strong> → Add file → Upload files → Commit. Wait 1 min then hard refresh all devices. Data unaffected.</p>
+    </div>
+
+    </div>`;}else if(tab==='settings'){
     const syncLabel=syncConfigured?cfg.gistId?`Connected (Gist: ${cfg.gistId.slice(-8)})`:`Connected`:'Not set up';
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
@@ -531,8 +608,8 @@ function render(){
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>You're now inside your repository. Click <strong>Add file → Upload files</strong>. Drag the file <strong>HB_v27.html</strong> into the upload area. Then click <strong>Commit changes</strong>.</span></li>
         <li style="display:flex;align-items:flex-start;gap=10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">5</span><span>Click <strong>Settings</strong> (top menu of your repository, not your account). Scroll down to the section called <strong>Pages</strong> on the left sidebar.</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">6</span><span>Under <strong>Branch</strong>, change it from "None" to <strong>main</strong>. Leave the folder as <strong>/ (root)</strong>. Click <strong>Save</strong>.</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">7</span><span>Wait 2 minutes. Refresh the Pages settings page. You will see a green box that says: <strong>"Your site is live at https://YOURNAME.github.io/budget/"</strong></span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">8</span><span>Your actual tracker URL is: <strong>https://YOURNAME.github.io/budget/HB_v27.html</strong> — replace YOURNAME with your GitHub username. Open this on any device and it works.</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">7</span><span>Wait 2 minutes. Refresh the Pages settings page. You will see a green box that says: <strong>"Your site is live at https://DEJAVOU1.github.io/budget/"</strong></span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">8</span><span>Your actual tracker URL is: <strong>https://DEJAVOU1.github.io/budget/HB_v27.html</strong> — replace YOURNAME with your GitHub username. Open this on any device and it works.</span></li>
       </ol>
       <div style="background:rgba(255,255,255,0.3);border-radius:var(--rs);padding:10px;margin-top:8px">
         <p style="font-size:13px;color:var(--Btx)"><strong>To update the file later</strong> (new version): go back to github.com → your budget repository → Add file → Upload files → upload the new HTML → Commit. The URL stays the same forever.</p>
@@ -545,7 +622,7 @@ function render(){
       <p style="font-size:13px;color:var(--Gtx);margin-bottom:10px;line-height:1.6"><strong>Do this on both iPhones</strong> once you have your GitHub URL.</p>
       <ol style="list-style:none;padding:0">
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">1</span><span>Open <strong>Safari</strong> on your iPhone (not Chrome, not Google app — must be Safari)</span></li>
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">2</span><span>Type or paste your URL (e.g. <strong>https://yourname.github.io/budget/HB_v27.html</strong>) into the address bar and load it</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">2</span><span>Type or paste your URL (e.g. <strong>https://DEJAVOU1.github.io/budget/HB_v27.html</strong>) into the address bar and load it</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">3</span><span>The tracker opens and looks like an app. Now tap the <strong>Share icon</strong> — it looks like a box with an arrow pointing up, at the bottom of your screen in the Safari toolbar</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">4</span><span>Scroll down in the share menu until you see <strong>Add to Home Screen</strong>. Tap it.</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--Gtx)"><span class="snum" style="background:var(--Gtx);color:var(--sf);flex-shrink:0">5</span><span>Change the name to <strong>Budget</strong> and tap <strong>Add</strong> (top right). The app icon now appears on your home screen — tap it any time like a normal app.</span></li>
@@ -556,7 +633,7 @@ function render(){
       <h3 style="color:var(--Btx);margin-bottom:10px">☁️ Step 3 — Set Up Cloud Sync (GitHub)</h3>
       <p style="font-size:13px;color:var(--Btx);margin-bottom:10px;line-height:1.6">Uses your existing GitHub account — no new accounts needed. Creates a private Gist to store your data. One person sets it up and shares the details with the others.</p>
       <ol style="list-style:none;padding:0">
-        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>Go to <strong>github.com</strong> and log in with your existing account (demitrivoulgaropoulos-byte).</span></li>
+        <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">1</span><span>Go to <strong>github.com</strong> and log in with your existing account (DEJAVOU1).</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">2</span><span>Click your <strong>profile picture</strong> in the top-right corner → click <strong>Settings</strong>.</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">3</span><span>Scroll all the way down the left sidebar and click <strong>Developer settings</strong>.</span></li>
         <li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--Btx)"><span class="snum" style="background:var(--Btx);color:var(--sf);flex-shrink:0">4</span><span>Click <strong>Personal access tokens</strong> → <strong>Tokens (classic)</strong> → <strong>Generate new token</strong> → <strong>Generate new token (classic)</strong>.</span></li>
@@ -661,7 +738,8 @@ function render(){
           <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
         </div>
       </div>
-      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button></div>
+      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}</div>
+<div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px"><button onclick="manualSync()" style="flex:1;padding:7px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div>
     </div>
     <div class="tabs">
       <div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div>
