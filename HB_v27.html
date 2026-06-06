@@ -30,7 +30,7 @@ h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
 .pb{background:var(--sf);border:1px solid var(--br2);border-radius:8px;padding:7px 14px;font-size:14px;font-weight:700;color:var(--tx);cursor:pointer}
 .pb:active{opacity:.7}
 .plbl{font-size:13px;color:var(--tx2);flex:1;text-align:center;font-weight:500}
-.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:sticky;top:68px;z-index:49}
+.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:sticky;top:var(--hdr-h,68px);z-index:49}
 .tab{flex:1;padding:5px 1px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-radius:8px;cursor:pointer;transition:all .12s;white-space:nowrap}
 .tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
 .sum-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
@@ -162,6 +162,7 @@ const CATS=[
   {id:'house',      label:'House Purchases',   icon:'🏠',weekly:50,   tracked:true},
   {id:'entertain',  label:'Going Out',         icon:'🎭',weekly:25,   tracked:true},
   {id:'uber',       label:'Uber / Taxi',       icon:'🚗',weekly:25,   tracked:true},
+  {id:'treats',     label:'Treats',            icon:'🍬',weekly:30,   tracked:true},
   {id:'petcare',    label:'Pet Care',          icon:'🐾',weekly:17.5, tracked:true},
   {id:'pttolls',    label:'PT/Tolls/Parking',  icon:'🚌',weekly:23,   tracked:true},
   {id:'petrolcar',  label:'Petrol / Car',      icon:'⛽',weekly:55,   tracked:true},
@@ -174,6 +175,7 @@ const CATS=[
   {id:'accountant', label:'Tax Accountant',    icon:'📋',weekly:4,    tracked:false,fixed:true},
   {id:'pestcontrol',label:'Pest Control',      icon:'🪲',weekly:4,    tracked:false,fixed:true},
   {id:'unionfees',  label:'Union / Donations', icon:'🤝',weekly:23,   tracked:false,fixed:true},
+  {id:'bankfees',   label:'Bank Fees',         icon:'🏦',weekly:2,    tracked:false,fixed:true},
   {id:'medical',    label:'Medical',           icon:'🏥',weekly:100,  tracked:true},
 ];
 
@@ -183,7 +185,7 @@ const SAVINGS=[
   {id:'emergency',   label:'Emergency Fund',     weekly:50,   note:'$2,600/yr – shock absorber',phase:'always'},
   {id:'renovation',  label:'Renovation Fund',    weekly:30,   note:'$1,560/yr for repairs',phase:'always'},
   {id:'localholiday',label:'Local Holiday',      weekly:60,   note:'$7,500 every 2 years',phase:'always'},
-  {id:'overseas4yr', label:'Overseas Holiday',   weekly:144,  note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
+  {id:'overseas4yr', label:'Overseas Holiday',   weekly:114,  note:'$30,000 every 4 yrs · from Jan 2028 · reduced $30/wk to fund Treats',phase:'from2028'},
 ];
 
 const SEED={"periods":{}};
@@ -468,7 +470,7 @@ function render(){
   }else if(tab==='chart'){
     const startPK2=getPK(0),allPks=Object.keys(data.periods||{}).filter(k=>k>=startPK2).sort();
     if(!allPks.includes(getPK(getCO()))&&allPks.length>0)allPks.push(getPK(getCO()));
-    const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat||(chartCats[0]?.id||'groceries');
+    const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat!==null?selChartCat:'all';
     const selCat=chartCats.find(c=>c.id===selId)||chartCats[0];
     const pts=allPks.map(pk=>{const idx=getPO(pk),sp=selId==='all'?chartCats.reduce((s,c)=>s+ps(data,pk,c.id),0):ps(data,pk,selId),bgt=selId==='all'?chartCats.reduce((s,c)=>s+fb(c.id),0):fb(selId),lbl=getPL(idx).split(' – ')[0];return{pk,idx,sp,bgt,lbl};});
     const maxV=Math.max(...pts.map(p=>Math.max(p.sp,p.bgt)),1);
@@ -494,19 +496,23 @@ function render(){
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
-      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
-      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
-      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
+      <div style="display:flex;gap:6px">
+        ${syncConfigured?`<button onclick="manualSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--G);background:var(--Gbg);color:var(--Gtx);white-space:nowrap">↻ Sync</button>`:''}
+        <button onclick="document.getElementById('syncSetupOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">${syncConfigured?'⚙ Update':'⚙ Set up'}</button>
+        ${syncConfigured?`<button onclick="fixSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--A);background:var(--Abg);color:var(--Atx);white-space:nowrap">🔧 Fix</button>`:''}
+      </div>
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
-    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
-    <button class="bw" onclick="exportData()">💾 Export Backup</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button onclick="document.getElementById('impOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">📄 Paste JSON</button>
+      <button onclick="exportData()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">💾 Export</button>
+    </div>
     </div>
     <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
@@ -571,19 +577,23 @@ function render(){
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
-      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
-      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
-      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
+      <div style="display:flex;gap:6px">
+        ${syncConfigured?`<button onclick="manualSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--G);background:var(--Gbg);color:var(--Gtx);white-space:nowrap">↻ Sync</button>`:''}
+        <button onclick="document.getElementById('syncSetupOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">${syncConfigured?'⚙ Update':'⚙ Set up'}</button>
+        ${syncConfigured?`<button onclick="fixSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--A);background:var(--Abg);color:var(--Atx);white-space:nowrap">🔧 Fix</button>`:''}
+      </div>
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
-    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
-    <button class="bw" onclick="exportData()">💾 Export Backup</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button onclick="document.getElementById('impOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">📄 Paste JSON</button>
+      <button onclick="exportData()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">💾 Export</button>
+    </div>
     </div>
     <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
@@ -670,19 +680,23 @@ function render(){
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
-      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
-      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
-      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
+      <div style="display:flex;gap:6px">
+        ${syncConfigured?`<button onclick="manualSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--G);background:var(--Gbg);color:var(--Gtx);white-space:nowrap">↻ Sync</button>`:''}
+        <button onclick="document.getElementById('syncSetupOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">${syncConfigured?'⚙ Update':'⚙ Set up'}</button>
+        ${syncConfigured?`<button onclick="fixSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--A);background:var(--Abg);color:var(--Atx);white-space:nowrap">🔧 Fix</button>`:''}
+      </div>
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
-    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
-    <button class="bw" onclick="exportData()">💾 Export Backup</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button onclick="document.getElementById('impOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">📄 Paste JSON</button>
+      <button onclick="exportData()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">💾 Export</button>
+    </div>
     </div>
     <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
@@ -738,7 +752,7 @@ function render(){
           <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
         </div>
       </div>
-      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}</div>
+      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div>
 <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px"><button onclick="manualSync()" style="flex:1;padding:7px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div>
     </div>
     <div class="tabs">
@@ -752,6 +766,10 @@ function render(){
     </div>
     ${content}`;
   rebuildCG();
+  requestAnimationFrame(()=>{
+    const h=document.querySelector('.hdr');
+    if(h) document.documentElement.style.setProperty('--hdr-h', h.offsetHeight+'px');
+  });
 }
 
 function rebuildCG(){
