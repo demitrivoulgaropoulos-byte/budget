@@ -427,8 +427,14 @@ function render(){
   const data=D(),pk=getPK(cur),isNow=cur===getCO();
   const pdDate=new Date(pk+'T12:00:00');
   const tracked=CATS.filter(c=>c.tracked),fixed=CATS.filter(c=>c.fixed);
-  let totAvail=0,totBgt=0,totSp=0;
-  tracked.forEach(c=>{totAvail+=avail(data,pk,c.id);totBgt+=fb(c.id);totSp+=ps(data,pk,c.id);});
+  let totAvail=0,totBgt=0,totSp=0,totCumSp=0,totCumBgt=0;
+  tracked.forEach(c=>{
+    totAvail+=avail(data,pk,c.id);
+    totBgt+=fb(c.id);
+    totSp+=ps(data,pk,c.id);
+    totCumSp+=totalSpentAll(data,c.id);
+    totCumBgt+=totalBudgetAll(c.id,cur);
+  });
   const totSC=totAvail<0?'over':totAvail<totBgt*0.15?'warn':'ok';
   const pdDate2=new Date(pk+'T12:00:00');
   const activeSav=SAVINGS.filter(s=>s.phase==='always'||(s.phase==='until2027'&&pdDate2<=new Date('2027-12-31T00:00:00'))||(s.phase==='from2028'&&pdDate2>=new Date('2028-01-01T00:00:00')));
@@ -438,7 +444,7 @@ function render(){
   let content='';
   if(tab==='snapshot'){
     const sq=tracked.map(c=>mkSq(data,pk,c,true)).join('');
-    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(totAvail)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div></div>
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available this fn</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(Math.abs(totAvail))}</div></div><div class="scard"><div class="sc-lbl">Cumulative budget</div><div class="sc-val">${fm(totCumBgt)}</div></div></div><div class="sum-row" style="margin-top:-6px"><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div><div class="scard"><div class="sc-lbl">Cumulative spent</div><div class="sc-val">${fm(totCumSp)}</div></div></div>
     <div class="sec"><div class="sec-hd">Essential spend this fortnight</div><div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='fixed'){
     const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
@@ -907,8 +913,20 @@ window.onload=async function(){
   await syncNow();
   render();
   // Every 3 minutes: push local state to cloud (no pull, no merge)
-  // This means other devices see updates on their next load or manual sync
   setInterval(()=>pushOnly(), 180000);
+  // Swipe left/right to switch tabs
+  const tabList=['snapshot','fixed','savings','history','chart','settings','guide'];
+  let swX=0,swY=0;
+  document.addEventListener('touchstart',e=>{swX=e.touches[0].clientX;swY=e.touches[0].clientY;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-swX;
+    const dy=e.changedTouches[0].clientY-swY;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*2){
+      const i=tabList.indexOf(tab);
+      if(dx<0&&i<tabList.length-1){tab=tabList[i+1];render();}
+      else if(dx>0&&i>0){tab=tabList[i-1];render();}
+    }
+  },{passive:true});
 };
 
 async function pushOnly(){
