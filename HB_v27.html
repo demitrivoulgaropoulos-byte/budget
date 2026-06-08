@@ -8,10 +8,8 @@
 :root{--bg:#F7F5F0;--sf:#FFF;--sf2:#F0EDE6;--tx:#1A1917;--tx2:#6B6760;--tx3:#9B9890;--br:rgba(0,0,0,0.08);--br2:rgba(0,0,0,0.15);--G:#1D9E75;--Gbg:#E1F5EE;--Gtx:#085041;--A:#BA7517;--Abg:#FAEEDA;--Atx:#633806;--R:#A32D2D;--Rbg:#FCEBEB;--Rtx:#501313;--B:#185FA5;--Bbg:#E6F1FB;--Btx:#042C53;--rad:13px;--rs:9px}
 @media(prefers-color-scheme:dark){:root{--bg:#1A1917;--sf:#242320;--sf2:#2C2C2A;--tx:#F1EFE8;--tx2:#9B9890;--tx3:#5A5956;--br:rgba(255,255,255,0.07);--br2:rgba(255,255,255,0.13);--Gbg:#04342C;--Gtx:#9FE1CB;--Abg:#412402;--Atx:#FAC775;--Rbg:#501313;--Rtx:#F7C1C1;--Bbg:#042C53;--Btx:#B5D4F4}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;display:flex;flex-direction:column}
-#app{display:flex;flex-direction:column;height:100%;overflow:hidden}
-.hdr{padding:10px 16px 8px;background:var(--bg);flex-shrink:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px}
+.hdr{padding:10px 16px 8px;position:sticky;top:0;z-index:50;background:var(--bg)}
 .hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
 .hdr-titles{flex:1}
 h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
@@ -32,11 +30,9 @@ h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
 .pb{background:var(--sf);border:1px solid var(--br2);border-radius:8px;padding:7px 14px;font-size:14px;font-weight:700;color:var(--tx);cursor:pointer}
 .pb:active{opacity:.7}
 .plbl{font-size:13px;color:var(--tx2);flex:1;text-align:center;font-weight:500}
-.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;flex-shrink:0}
+.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:sticky;top:68px;z-index:49}
 .tab{flex:1;padding:5px 1px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-radius:8px;cursor:pointer;transition:all .12s;white-space:nowrap}
 .tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
-.scroll-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:90px}
-.fixed-subhdr{flex-shrink:0;background:var(--bg)}
 .sum-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
 .scard{background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:9px 12px}
 .sc-lbl{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
@@ -166,7 +162,6 @@ const CATS=[
   {id:'house',      label:'House Purchases',   icon:'🏠',weekly:50,   tracked:true},
   {id:'entertain',  label:'Going Out',         icon:'🎭',weekly:25,   tracked:true},
   {id:'uber',       label:'Uber / Taxi',       icon:'🚗',weekly:25,   tracked:true},
-  {id:'treats',     label:'Treats',            icon:'🍬',weekly:30,   tracked:true},
   {id:'petcare',    label:'Pet Care',          icon:'🐾',weekly:17.5, tracked:true},
   {id:'pttolls',    label:'PT/Tolls/Parking',  icon:'🚌',weekly:23,   tracked:true},
   {id:'petrolcar',  label:'Petrol / Car',      icon:'⛽',weekly:55,   tracked:true},
@@ -179,7 +174,6 @@ const CATS=[
   {id:'accountant', label:'Tax Accountant',    icon:'📋',weekly:4,    tracked:false,fixed:true},
   {id:'pestcontrol',label:'Pest Control',      icon:'🪲',weekly:4,    tracked:false,fixed:true},
   {id:'unionfees',  label:'Union / Donations', icon:'🤝',weekly:23,   tracked:false,fixed:true},
-  {id:'bankfees',   label:'Bank Fees',         icon:'🏦',weekly:2,    tracked:false,fixed:true},
   {id:'medical',    label:'Medical',           icon:'🏥',weekly:100,  tracked:true},
 ];
 
@@ -189,7 +183,7 @@ const SAVINGS=[
   {id:'emergency',   label:'Emergency Fund',     weekly:50,   note:'$2,600/yr – shock absorber',phase:'always'},
   {id:'renovation',  label:'Renovation Fund',    weekly:30,   note:'$1,560/yr for repairs',phase:'always'},
   {id:'localholiday',label:'Local Holiday',      weekly:60,   note:'$7,500 every 2 years',phase:'always'},
-  {id:'overseas4yr', label:'Overseas Holiday',   weekly:114,  note:'$30,000 every 4 yrs · from Jan 2028 · reduced $30/wk to fund Treats',phase:'from2028'},
+  {id:'overseas4yr', label:'Overseas Holiday',   weekly:144,  note:'$30,000 every 4 yrs · from Jan 2028',phase:'from2028'},
 ];
 
 const SEED={"periods":{}};
@@ -383,11 +377,11 @@ function totalBudgetAll(id,viewOffset){
   const offset=viewOffset!==undefined?viewOffset:getCO();
   return (offset+1)*fb(id);
 }
-function cumSav(weekly){
-  // Only count fully completed fortnights
-  const diffDays=Math.floor((new Date()-TS)/864e5);
-  const completedFns=Math.floor(diffDays/14);
-  return completedFns*weekly*2;
+function cumSav(weekly,offset){
+  // Count fortnights accumulated up to and including viewed period
+  // offset=0 (first fn) shows 1 allocation, offset=1 shows 2, etc.
+  const fn=offset!==undefined?offset:Math.max(0,Math.floor((new Date()-TS)/864e5/14));
+  return (fn+1)*weekly*2;
 }
 function fm(n){return'$'+Math.abs(Math.round(n)).toLocaleString('en-AU');}
 function fm2(n){return'$'+Math.abs(n).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -418,9 +412,9 @@ function mkSq(data,pk,cat,clickable){
   </div>`;
 }
 
-function mkSavSq(s){
-  const cum=cumSav(s.weekly);
-  const cumEl=`<div class="sv-cum">≈${fm(cum)} since Jun 3</div>`;
+function mkSavSq(s,offset){
+  const cum=cumSav(s.weekly,offset);
+  const cumEl=`<div class="sv-cum">≈${fm(cum)} by fn ${offset!==undefined?offset+1:1}</div>`;
   const warnEl=s.warn?`<div class="sv-warn">⚠ ${s.warn}</div>`:'';
   return`<div class="sv-sq">
     <div><div class="sq-hd" style="margin-bottom:4px"><span class="sq-name">${s.label}</span></div>
@@ -441,24 +435,24 @@ function render(){
   const cfg=getSyncCfg();
   const syncConfigured=!!(cfg.token&&cfg.gistId);
 
-  let content='',subhdr='';
+  let content='';
   if(tab==='snapshot'){
     const sq=tracked.map(c=>mkSq(data,pk,c,true)).join('');
-    subhdr=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(totAvail)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div></div>`;
-    content=`<div class="sec"><div class="sec-hd">Essential spend this fortnight</div><div class="sq-grid">${sq}</div></div>`;
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(totAvail)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div></div>
+    <div class="sec"><div class="sec-hd">Essential spend this fortnight</div><div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='fixed'){
     const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
     const fixTot=fixed.reduce((s,c)=>s+fb(c.id),0),fixSp=fixed.reduce((s,c)=>s+ps(data,pk,c.id),0);
-    subhdr=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Budget this fn</div><div class="sc-val">${fm(fixTot)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(fixSp)}</div></div></div>`;
-    content=`<div class="sec"><div class="ibox ibl" style="margin-bottom:10px"><p>Fixed costs that run automatically each fortnight. These do not need daily tracking — import statements monthly to review actuals.</p></div>
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Budget this fn</div><div class="sc-val">${fm(fixTot)}</div></div><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(fixSp)}</div></div></div>
+    <div class="sec">
     <div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='savings'){
     const savTot=activeSav.reduce((a,s)=>a+s.weekly*2,0);
     const savCum=activeSav.filter(s=>s.phase!=='from2028').reduce((a,s)=>a+cumSav(s.weekly),0);
-    const sq=activeSav.map(s=>mkSavSq(s)).join('');
-    subhdr=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Saving this fn</div><div class="sc-val" style="color:var(--B)">${fm(savTot)}</div></div><div class="scard"><div class="sc-lbl">Saved since Jun 3</div><div class="sc-val" style="color:var(--G)">≈${fm(savCum)}</div></div></div>`;
-    content=`<div class="sec"><div class="sq-grid">${sq}</div>
-    <div class="ibox ibl" style="margin-top:4px"><p><strong>Holiday plan:</strong> Year 1 local ($7k) · Year 2 rest · Year 3 local ($7k) · Year 4 overseas ($30k). 2027 Xmas trip saving at $145.50/wk — target ~$12,000 by Dec 2027. From Jan 2028 the overseas 4yr fund starts at $144/wk.</p></div></div>`;
+    const sq=activeSav.map(s=>mkSavSq(s,cur)).join('');
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Saving this fn</div><div class="sc-val" style="color:var(--B)">${fm(savTot)}</div></div><div class="scard"><div class="sc-lbl">Saved since Jun 3</div><div class="sc-val" style="color:var(--G)">≈${fm(savCum)}</div></div></div>
+    <div class="sec"><div class="sq-grid">${sq}</div>
+    </div>`;
   }else if(tab==='history'){
     const startPK=getPK(0),periods=data.periods||{},pkeys=Object.keys(periods).filter(k=>k>=startPK).sort().reverse();
     const rows=pkeys.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:24px 0">No history yet</p>`:pkeys.map(k=>{
@@ -474,7 +468,7 @@ function render(){
   }else if(tab==='chart'){
     const startPK2=getPK(0),allPks=Object.keys(data.periods||{}).filter(k=>k>=startPK2).sort();
     if(!allPks.includes(getPK(getCO()))&&allPks.length>0)allPks.push(getPK(getCO()));
-    const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat!==null?selChartCat:'all';
+    const chartCats=CATS.filter(c=>c.tracked),selId=selChartCat||(chartCats[0]?.id||'groceries');
     const selCat=chartCats.find(c=>c.id===selId)||chartCats[0];
     const pts=allPks.map(pk=>{const idx=getPO(pk),sp=selId==='all'?chartCats.reduce((s,c)=>s+ps(data,pk,c.id),0):ps(data,pk,selId),bgt=selId==='all'?chartCats.reduce((s,c)=>s+fb(c.id),0):fb(selId),lbl=getPL(idx).split(' – ')[0];return{pk,idx,sp,bgt,lbl};});
     const maxV=Math.max(...pts.map(p=>Math.max(p.sp,p.bgt)),1);
@@ -500,23 +494,19 @@ function render(){
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
-      <div style="display:flex;gap:6px">
-        ${syncConfigured?`<button onclick="manualSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--G);background:var(--Gbg);color:var(--Gtx);white-space:nowrap">↻ Sync</button>`:''}
-        <button onclick="document.getElementById('syncSetupOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">${syncConfigured?'⚙ Update':'⚙ Set up'}</button>
-        ${syncConfigured?`<button onclick="fixSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--A);background:var(--Abg);color:var(--Atx);white-space:nowrap">🔧 Fix</button>`:''}
-      </div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <button onclick="document.getElementById('impOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">📄 Paste JSON</button>
-      <button onclick="exportData()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">💾 Export</button>
-    </div>
+    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
+    <button class="bw" onclick="exportData()">💾 Export Backup</button>
     </div>
     <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
@@ -581,23 +571,19 @@ function render(){
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
-      <div style="display:flex;gap:6px">
-        ${syncConfigured?`<button onclick="manualSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--G);background:var(--Gbg);color:var(--Gtx);white-space:nowrap">↻ Sync</button>`:''}
-        <button onclick="document.getElementById('syncSetupOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">${syncConfigured?'⚙ Update':'⚙ Set up'}</button>
-        ${syncConfigured?`<button onclick="fixSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--A);background:var(--Abg);color:var(--Atx);white-space:nowrap">🔧 Fix</button>`:''}
-      </div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <button onclick="document.getElementById('impOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">📄 Paste JSON</button>
-      <button onclick="exportData()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">💾 Export</button>
-    </div>
+    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
+    <button class="bw" onclick="exportData()">💾 Export Backup</button>
     </div>
     <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
@@ -684,23 +670,19 @@ function render(){
     const syncColour=syncConfigured?'var(--G)':'var(--tx3)';
     content=`<div class="sec"><div class="sec-hd">☁️ Cloud sync</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:14px;font-weight:700">Status</span>
         <span style="font-size:13px;font-weight:700;color:${syncColour}">${syncLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gist ID: ${cfg.gistId||'none'}</div>
-      <div style="display:flex;gap:6px">
-        ${syncConfigured?`<button onclick="manualSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--G);background:var(--Gbg);color:var(--Gtx);white-space:nowrap">↻ Sync</button>`:''}
-        <button onclick="document.getElementById('syncSetupOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">${syncConfigured?'⚙ Update':'⚙ Set up'}</button>
-        ${syncConfigured?`<button onclick="fixSync()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--A);background:var(--Abg);color:var(--Atx);white-space:nowrap">🔧 Fix</button>`:''}
-      </div>
+      ${syncConfigured?`<button class="bw" style="margin-bottom:6px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)" onclick="manualSync()">↻ Sync now</button>`:''}
+      <button class="bw" style="margin-bottom:6px" onclick="document.getElementById('syncSetupOv').classList.add('open')">${syncConfigured?'Update sync settings':'Set up cloud sync'}</button>
+      ${syncConfigured?`<button class="bw" style="background:var(--Abg);color:var(--Atx);border-color:var(--A)" onclick="fixSync()">🔧 Fix sync (create new bin)</button>`:''}
     </div>
     <div class="sec-hd">Import statement</div>
     <div class="ibox iam"><p>When your 28 Degrees statement arrives (6th of each month), open a new Claude chat, say <em>"Process my statement for budget tracker – export as JSON"</em> and attach the PDF. Paste the JSON here — transactions land in the correct fortnights automatically.</p></div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <button onclick="document.getElementById('impOv').classList.add('open')" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">📄 Paste JSON</button>
-      <button onclick="exportData()" style="flex:1;padding:6px 4px;border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--br2);background:var(--sf2);color:var(--tx);white-space:nowrap">💾 Export</button>
-    </div>
+    <button class="bw" onclick="document.getElementById('impOv').classList.add('open')">📄 Paste Statement JSON</button>
+    <button class="bw" onclick="exportData()">💾 Export Backup</button>
     </div>
     <div class="sec"><div class="sec-hd">Fortnightly budgets</div>
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
@@ -756,7 +738,7 @@ function render(){
           <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
         </div>
       </div>
-      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div>
+      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}</div>
 <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px"><button onclick="manualSync()" style="flex:1;padding:7px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div>
     </div>
     <div class="tabs">
@@ -768,8 +750,7 @@ function render(){
       <div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div>
       <div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div>
     </div>
-    ${subhdr?`<div class="fixed-subhdr">${subhdr}</div>`:''}
-    <div class="scroll-body">${content}</div>`;
+    ${content}`;
   rebuildCG();
 }
 
