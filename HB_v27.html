@@ -132,6 +132,14 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
   <div class="brow"><button class="btn bs" onclick="closeOv('addOv')">Cancel</button><button class="btn bp" onclick="saveExp()">Add</button></div>
 </div></div>
 <div class="ov" id="catOv"><div class="sheet"><div class="hdl"></div><h2 class="sh2" id="catTitle"></h2><div id="catBody"></div></div></div>
+<div class="ov" id="editOv"><div class="sheet">
+  <div class="hdl"></div><h2 class="sh2">Edit Transaction</h2>
+  <div class="fg"><label class="fl">Category</label><div class="cg" id="editCg"></div></div>
+  <div class="fg"><label class="fl">Amount ($)</label><input class="fi" type="number" id="editAmt" step="0.01" inputmode="decimal"></div>
+  <div class="fg"><label class="fl">Description</label><input class="fi" type="text" id="editDesc"></div>
+  <div class="fg"><label class="fl">Date (DD/MM/YYYY)</label><input class="fi" type="text" id="editDate" placeholder="03/06/2026"></div>
+  <div class="brow"><button class="btn bs" onclick="closeOv('editOv')">Cancel</button><button class="btn bp" onclick="saveEdit()">Save</button></div>
+</div></div>
 <div class="ov" id="impOv"><div class="sheet">
   <div class="hdl"></div><h2 class="sh2">Import Statement JSON</h2>
   <div class="ibox ibl"><p>Open a new Claude chat, say <em>"Process my statement for budget tracker — export as JSON"</em> and attach the PDF. Paste the result here. Categories: Groceries, Eating Out, Alcohol, Gifts, Clothes, Beauty, House Purchases, Going Out, Uber / Taxi, Treat.</p></div>
@@ -392,6 +400,7 @@ function pct(a,b){return b>0?Math.min(100,Math.max(0,Math.round(a/b*100))):0;}
 function scCls(sp,bgt){if(bgt-sp<0)return'over';if((bgt-sp)/bgt<0.2)return'warn';return'ok';}
 
 let tab='snapshot',cur=getCO(),sel=null;
+let editTx=null,editPk=null,editSel=null;
 let expandedPeriods=new Set();
 let retroPeriodKey=null;
 let selChartCat=null;
@@ -469,7 +478,7 @@ function render(){
       const bgt=tracked.reduce((s,c)=>s+fb(c.id),0);
       const cs=tot>bgt?'cov':tot>bgt*.85?'cwn':'cok';
       const isExp=expandedPeriods.has(k);
-      const txRows=txs.map(t=>{const cat=CATS.find(c=>c.id===t.catId);return`<div class="htx-row"><div class="htx-cat">${cat?cat.icon:''} <span style="font-size:11px;color:var(--tx2)">${cat?cat.label:'?'}</span></div><div class="htx-desc">${t.description||t.catId}</div><div style="display:flex;align-items:center;gap:6px"><span class="htx-amt">-${fm2(t.amount)}</span><span style="font-size:10px;color:var(--tx3)">${fmtDate(t.date)}</span><button class="htx-del" onclick="histDelTx('${k}','${t.id}',event)">Del</button></div></div>`;}).join('');
+      const txRows=txs.map(t=>{const cat=CATS.find(c=>c.id===t.catId);return`<div class="htx-row"><div class="htx-cat">${cat?cat.icon:''} <span style="font-size:11px;color:var(--tx2)">${cat?cat.label:'?'}</span></div><div class="htx-desc">${t.description||t.catId}</div><div style="display:flex;align-items:center;gap:6px"><span class="htx-amt">-${fm2(t.amount)}</span><span style="font-size:10px;color:var(--tx3)">${fmtDate(t.date)}</span><button class="htx-del" onclick="openEdit('${k}','${t.id}',event)" style="background:var(--Bbg);color:var(--Btx);border-color:var(--B);margin-right:4px">Edit</button><button class="htx-del" onclick="histDelTx('${k}','${t.id}',event)">Del</button></div></div>`;}).join('');
       return`<div class="hist-card"><div class="hist-banner" onclick="togglePeriod('${k}')"><div><div style="font-size:14px;font-weight:700">${getPL(idx)}</div><div style="font-size:12px;color:var(--tx2);margin-top:2px">${txs.length} transaction${txs.length!==1?'s':''}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="chip ${cs}">${fm(tot)}</span><span style="font-size:16px;color:var(--tx3);${isExp?'transform:rotate(180deg)':''}">⌄</span></div></div>${isExp?`<div class="htx-list">${txRows}<button class="htx-add-btn" onclick="openRetroAdd('${k}',event)">+ Add transaction to this period</button></div>`:''}</div>`;
     }).join('');
     content=`<div class="sec"><div class="sec-hd">All fortnights</div>${rows}</div>`;
@@ -768,6 +777,62 @@ function rebuildCG(){
 }
 function pickC(id){sel=id;rebuildCG();}
 
+function openEdit(pk,id,e){
+  if(e)e.stopPropagation();
+  const data=D();
+  const tx=((data.periods||{})[pk]?.transactions||[]).find(t=>String(t.id)===String(id));
+  if(!tx)return;
+  editTx=tx;editPk=pk;editSel=tx.catId;
+  // Pre-fill fields
+  document.getElementById('editAmt').value=tx.amount;
+  document.getElementById('editDesc').value=tx.description||'';
+  // Convert ISO date to DD/MM/YYYY
+  const[y,m,d]=(tx.date||pk).split('-');
+  document.getElementById('editDate').value=d+'/'+m+'/'+y;
+  // Build category grid
+  const g=document.getElementById('editCg');
+  g.innerHTML=CATS.filter(c=>c.tracked||c.fixed).map(c=>`<div class="co${editSel===c.id?' sel':''}" onclick="editSel='${c.id}';document.querySelectorAll('#editCg .co').forEach(x=>x.classList.remove('sel'));this.classList.add('sel')">${c.icon}<br><span style="font-size:10px">${c.label}</span></div>`).join('');
+  document.getElementById('editOv').classList.add('open');
+}
+
+async function saveEdit(){
+  if(!editTx||!editPk)return;
+  const amt=parseFloat(document.getElementById('editAmt').value);
+  const desc=document.getElementById('editDesc').value.trim();
+  const dateStr=document.getElementById('editDate').value.trim();
+  if(!amt||amt<=0){alert('Enter a valid amount');return;}
+  // Parse DD/MM/YYYY back to ISO
+  let isoDate=editPk;
+  if(dateStr&&dateStr.includes('/')){
+    const[dd,mm,yyyy]=dateStr.split('/');
+    if(dd&&mm&&yyyy)isoDate=yyyy+'-'+mm.padStart(2,'0')+'-'+dd.padStart(2,'0');
+  }
+  // Determine if date change moves to different period
+  const newPk=getPK(getPO(isoDate));
+  const data=D();
+  // Remove from old period
+  if(data.periods&&data.periods[editPk]){
+    data.periods[editPk].transactions=data.periods[editPk].transactions.filter(t=>String(t.id)!==String(editTx.id));
+  }
+  // Add to new period (may be same or different)
+  if(!data.periods[newPk])data.periods[newPk]={transactions:[]};
+  data.periods[newPk].transactions.push({
+    id:editTx.id,
+    catId:editSel||editTx.catId,
+    amount:Math.round(amt*100)/100,
+    description:desc||editSel,
+    date:isoDate,
+    _ts:Date.now()
+  });
+  saveLocal(data);
+  clearTimeout(syncTimer);
+  await cloudPut(data);
+  setSyncStatus('ok');
+  closeOv('editOv');
+  closeOv('catOv');
+  render();
+}
+
 function openAdd(){
   sel=null;document.getElementById('amt').value='';document.getElementById('desc').value='';
   document.getElementById('addOv').classList.add('open');rebuildCG();
@@ -793,7 +858,7 @@ function openCat(id){
   const bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id),av=bgt+cr-sp;
   const s=av<0?'over':av<bgt*0.2?'warn':'ok';
   const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
-  const txHtml=txs.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:16px 0">No transactions this fortnight</p>`:txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="tx-item"><div><div class="tx-d">${t.description}</div><div class="tx-m">${fmtDate(t.date)}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="tx-a">-${fm2(t.amount)}</span><button class="tx-del" onclick="delTx('${pk}','${t.id}')">Del</button></div></div>`).join('');
+  const txHtml=txs.length===0?`<p style="color:var(--tx2);font-size:14px;text-align:center;padding:16px 0">No transactions this fortnight</p>`:txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="tx-item"><div><div class="tx-d">${t.description}</div><div class="tx-m">${fmtDate(t.date)}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="tx-a">-${fm2(t.amount)}</span><button class="tx-del" onclick="openEdit('${pk}','${t.id}')" style="background:var(--Bbg);color:var(--Btx);margin-right:4px;font-size:12px">Edit</button><button class="tx-del" onclick="delTx('${pk}','${t.id}')">Del</button></div></div>`).join('');
   document.getElementById('catTitle').textContent=`${cat.icon} ${cat.label}`;
   document.getElementById('catBody').innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:12px">
