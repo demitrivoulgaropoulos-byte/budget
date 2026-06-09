@@ -360,12 +360,14 @@ function getCO(){return Math.max(0,Math.floor(Math.floor((new Date()-PS)/864e5)/
 function fb(id){const c=CATS.find(x=>x.id===id);return c?c.weekly*2:0;}
 function ps(data,pk,id){return((data.periods||{})[pk]?.transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0);}
 function carry(data,pk,id){
+  // Iterate every fortnight from fn0 up to (but not including) pk
+  // whether or not that fortnight has any transactions
   let c=0;
-  const spk=getPK(0);
-  for(const k of Object.keys(data.periods||{}).sort()){
-    if(k<spk)continue; // ignore pre-start periods
-    if(k>=pk)break;
-    c+=fb(id)-((data.periods[k].transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0));
+  const pkOffset=getPO(pk);
+  for(let i=0;i<pkOffset;i++){
+    const k=getPK(i);
+    const spent=((data.periods||{})[k]?.transactions||[]).filter(t=>t.catId===id).reduce((s,t)=>s+t.amount,0);
+    c+=fb(id)-spent;
   }
   return c;
 }
@@ -744,7 +746,7 @@ function render(){
           <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
         </div>
       </div>
-      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div>
+      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G);margin-right:8px">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div>
 <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px"><button onclick="manualSync()" style="flex:1;padding:7px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div>
     </div>
     <div class="tabs">
