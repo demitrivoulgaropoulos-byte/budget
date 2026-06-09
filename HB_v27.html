@@ -909,10 +909,50 @@ async function fixSync(){
   render();
 }
 
+
+function migratePeriodsIfNeeded(){
+  // One-time fix: old getPK used toISOString() (UTC) so keys were 1 day behind
+  // in AEST (UTC+10). This migrates '2026-06-02' → '2026-06-03' etc.
+  const data=loadRaw();
+  if(!data.periods||Object.keys(data.periods).length===0)return false;
+  // Check if any keys are "off by one" compared to what getPK now returns
+  // A key is old-style if shifting it by +1 day matches a valid getPK() output
+  let migrated=false;
+  const newPeriods={};
+  Object.keys(data.periods).forEach(k=>{
+    // Parse the key date and add 1 day
+    const[y,m,d]=k.split('-').map(Number);
+    const shifted=new Date(y,m-1,d+1);
+    const newKey=shifted.getFullYear()+'-'+String(shifted.getMonth()+1).padStart(2,'0')+'-'+String(shifted.getDate()).padStart(2,'0');
+    // Check if the shifted key aligns with a valid fortnight (getPO(newKey) gives integer*14 days from PS)
+    const dd=(new Date(shifted)-new Date(PS.getFullYear(),PS.getMonth(),PS.getDate()))/(864e5);
+    const isValid=(dd>=0&&Math.round(dd)%14===0);
+    // Also check the original key does NOT align (confirming it was off)
+    const ddOrig=(new Date(y,m-1,d)-new Date(PS.getFullYear(),PS.getMonth(),PS.getDate()))/(864e5);
+    const origValid=(ddOrig>=0&&Math.round(ddOrig)%14===0);
+    if(isValid&&!origValid){
+      newPeriods[newKey]=data.periods[k];
+      migrated=true;
+    }else{
+      newPeriods[k]=data.periods[k];
+    }
+  });
+  if(migrated){
+    data.periods=newPeriods;
+    saveLocal(data);
+    console.log('Period keys migrated to local dates');
+    return true;
+  }
+  return false;
+}
+
 window.onload=async function(){
+  // Migrate old UTC-based period keys to local date keys (one-time fix)
+  const wasMigrated=migratePeriodsIfNeeded();
   // On load: pull from cloud once and merge, then local is source of truth
   render();
   await syncNow();
+  if(wasMigrated)await cloudPut(loadRaw()); // push migrated data to cloud
   render();
   // Every 3 minutes: push local state to cloud (no pull, no merge)
   setInterval(()=>pushOnly(), 180000);
