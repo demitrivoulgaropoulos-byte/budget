@@ -149,8 +149,8 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
 
 <script>
 const SK='bgt_v27';
-const PS=new Date('2026-06-03T00:00:00');
-const TS=new Date('2026-06-03T00:00:00');
+const PS=new Date(2026,5,3);// Jun 3 local midnight
+const TS=new Date(2026,5,3);// Jun 3 local midnight
 
 const CATS=[
   {id:'groceries',  label:'Groceries',        icon:'🛒',weekly:550,  tracked:true},
@@ -349,8 +349,8 @@ function loadRaw(){try{return JSON.parse(localStorage.getItem(SK))||{periods:{}}
 function saveLocal(d){localStorage.setItem(SK,JSON.stringify(d));}
 function D(){const e=loadRaw();if(!e.periods)e.periods={};return e;}
 
-function getPO(ds){const d=new Date(ds+'T12:00:00'),dd=Math.floor((d-PS)/864e5);return Math.floor(dd/14);}
-function getPK(o){const d=new Date(PS);d.setDate(d.getDate()+o*14);return d.toISOString().slice(0,10);}
+function getPO(ds){const[y,m,d]=ds.split('-').map(Number);const date=new Date(y,m-1,d);const dd=Math.round((date-new Date(PS.getFullYear(),PS.getMonth(),PS.getDate()))/864e5);return Math.max(0,Math.floor(dd/14));}
+function getPK(o){const d=new Date(PS);d.setDate(d.getDate()+o*14);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getPL(o){
   const s=new Date(PS);s.setDate(s.getDate()+o*14);
   const e=new Date(s);e.setDate(e.getDate()+13);
