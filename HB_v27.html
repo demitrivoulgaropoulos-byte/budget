@@ -400,7 +400,7 @@ function shift(d){cur=Math.max(0,cur+d);render();}
 
 function mkSq(data,pk,cat,clickable){
   const id=cat.id,bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id);
-  const eff=bgt+cr,p=pct(sp,eff>0?eff:bgt),s=scCls(sp,bgt);
+  const eff=bgt+cr,p=pct(sp,eff>0?eff:bgt),s=scCls(sp,eff>0?eff:bgt);
   let carryHtml=cr<-0.5?`<div class="sq-carry neg">▲ ${fm(Math.abs(cr))} deficit</div>`:cr>0.5?`<div class="sq-carry pos">▼ ${fm(cr)} surplus</div>`:`<div class="sq-carry none">No carry</div>`;
   const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
   const ca=clickable?`onclick="openCat('${id}')" `:'';
@@ -444,7 +444,7 @@ function render(){
   let content='';
   if(tab==='snapshot'){
     const sq=tracked.map(c=>mkSq(data,pk,c,true)).join('');
-    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Available this fn</div><div class="sc-val ${totSC}">${totAvail<0?'-':''}${fm(Math.abs(totAvail))}</div></div><div class="scard"><div class="sc-lbl">Cumulative budget</div><div class="sc-val">${fm(totCumBgt)}</div></div></div><div class="sum-row" style="margin-top:-6px"><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div><div class="scard"><div class="sc-lbl">Cumulative spent</div><div class="sc-val">${fm(totCumSp)}</div></div></div>
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Overall position</div><div class="sc-val ${totSC}">${totAvail<0?'▲ Deficit ':'▼ Surplus '}${fm(Math.abs(totAvail))}</div></div><div class="scard"><div class="sc-lbl">Cumulative budget</div><div class="sc-val">${fm(totCumBgt)}</div></div></div><div class="sum-row" style="margin-top:-6px"><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div><div class="scard"><div class="sc-lbl">Cumulative spent</div><div class="sc-val">${fm(totCumSp)}</div></div></div>
     <div class="sec"><div class="sec-hd">Essential spend this fortnight</div><div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='fixed'){
     const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
@@ -744,7 +744,7 @@ function render(){
           <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
         </div>
       </div>
-      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span><button class="pb" onclick="shift(1)">›</button>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}</div>
+      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G)">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div>
 <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px"><button onclick="manualSync()" style="flex:1;padding:7px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div>
     </div>
     <div class="tabs">
