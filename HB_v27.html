@@ -8,8 +8,8 @@
 :root{--bg:#F7F5F0;--sf:#FFF;--sf2:#F0EDE6;--tx:#1A1917;--tx2:#6B6760;--tx3:#9B9890;--br:rgba(0,0,0,0.08);--br2:rgba(0,0,0,0.15);--G:#1D9E75;--Gbg:#E1F5EE;--Gtx:#085041;--A:#BA7517;--Abg:#FAEEDA;--Atx:#633806;--R:#A32D2D;--Rbg:#FCEBEB;--Rtx:#501313;--B:#185FA5;--Bbg:#E6F1FB;--Btx:#042C53;--rad:13px;--rs:9px}
 @media(prefers-color-scheme:dark){:root{--bg:#1A1917;--sf:#242320;--sf2:#2C2C2A;--tx:#F1EFE8;--tx2:#9B9890;--tx3:#5A5956;--br:rgba(255,255,255,0.07);--br2:rgba(255,255,255,0.13);--Gbg:#04342C;--Gtx:#9FE1CB;--Abg:#412402;--Atx:#FAC775;--Rbg:#501313;--Rtx:#F7C1C1;--Bbg:#042C53;--Btx:#B5D4F4}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px}
-.hdr{padding:10px 16px 8px;position:sticky;top:0;z-index:50;background:var(--bg)}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px;padding-top:120px}
+.hdr{padding:10px 16px 8px;position:fixed;top:0;left:0;right:0;z-index:50;background:var(--bg)}
 .hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
 .hdr-titles{flex:1}
 h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
@@ -30,7 +30,7 @@ h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
 .pb{background:var(--sf);border:1px solid var(--br2);border-radius:8px;padding:7px 14px;font-size:14px;font-weight:700;color:var(--tx);cursor:pointer}
 .pb:active{opacity:.7}
 .plbl{font-size:13px;color:var(--tx2);flex:1;text-align:center;font-weight:500}
-.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:sticky;top:68px;z-index:49}
+.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:fixed;top:78px;left:0;right:0;z-index:49}
 .tab{flex:1;padding:5px 1px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-radius:8px;cursor:pointer;transition:all .12s;white-space:nowrap}
 .tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
 .sum-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
@@ -126,7 +126,13 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
 <button class="fab" onclick="openAdd()" aria-label="Add">+</button>
 <div class="ov" id="addOv"><div class="sheet">
   <div class="hdl"></div><h2 class="sh2">Add Expense</h2>
-  <div class="fg"><label class="fl">Category</label><div class="cg" id="cg"></div></div>
+  <div class="fg">
+    <div style="display:flex;background:var(--sf2);border-radius:10px;padding:3px;margin-bottom:10px;gap:2px" id="addModeBar">
+      <button id="addModeEss" onclick="setAddMode('essentials')" style="flex:1;padding:7px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:var(--tx);color:var(--bg)">Essentials</button>
+      <button id="addModeFix" onclick="setAddMode('fixed')" style="flex:1;padding:7px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:transparent;color:var(--tx2)">Fixed</button>
+    </div>
+    <label class="fl">Category</label><div class="cg" id="cg"></div>
+  </div>
   <div class="fg"><label class="fl">Amount ($)</label><input class="fi" type="number" id="amt" placeholder="0.00" step="0.01" inputmode="decimal"></div>
   <div class="fg"><label class="fl">Description (optional)</label><input class="fi" type="text" id="desc" placeholder="e.g. Woolworths, Uber Eats"></div>
   <div class="brow"><button class="btn bs" onclick="closeOv('addOv')">Cancel</button><button class="btn bp" onclick="saveExp()">Add</button></div>
@@ -771,9 +777,18 @@ function render(){
   rebuildCG();
 }
 
+function setAddMode(mode){
+  addMode=mode;sel=null;
+  const eb=document.getElementById('addModeEss');
+  const fb=document.getElementById('addModeFix');
+  if(eb){eb.style.background=mode==='essentials'?'var(--tx)':'transparent';eb.style.color=mode==='essentials'?'var(--bg)':'var(--tx2)';}
+  if(fb){fb.style.background=mode==='fixed'?'var(--tx)':'transparent';fb.style.color=mode==='fixed'?'var(--bg)':'var(--tx2)';}
+  rebuildCG();
+}
 function rebuildCG(){
   const g=document.getElementById('cg');if(!g)return;
-  g.innerHTML=CATS.filter(c=>c.tracked).map(c=>`<div class="co${sel===c.id?' sel':''}" onclick="pickC('${c.id}')">${c.icon}<br>${c.label}</div>`).join('');
+  const cats=addMode==='fixed'?CATS.filter(c=>c.fixed):CATS.filter(c=>c.tracked);
+  g.innerHTML=cats.map(c=>`<div class="co${sel===c.id?' sel':''}" onclick="pickC('${c.id}')">${c.icon}<br><span style="font-size:10px">${c.label}</span></div>`).join('');
 }
 function pickC(id){sel=id;rebuildCG();}
 
