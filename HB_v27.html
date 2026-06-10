@@ -834,8 +834,10 @@ async function saveEdit(){
 }
 
 function openAdd(){
-  sel=null;document.getElementById('amt').value='';document.getElementById('desc').value='';
-  document.getElementById('addOv').classList.add('open');rebuildCG();
+  sel=null;addMode='essentials';
+  document.getElementById('amt').value='';document.getElementById('desc').value='';
+  document.getElementById('addOv').classList.add('open');
+  setAddMode('essentials');
   setTimeout(()=>document.getElementById('amt').focus(),150);
 }
 function saveExp(){
