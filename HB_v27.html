@@ -135,6 +135,7 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
   </div>
   <div class="fg"><label class="fl">Amount ($)</label><input class="fi" type="number" id="amt" placeholder="0.00" step="0.01" inputmode="decimal"></div>
   <div class="fg"><label class="fl">Description (optional)</label><input class="fi" type="text" id="desc" placeholder="e.g. Woolworths, Uber Eats"></div>
+  <div class="fg"><label class="fl">Date (leave blank for today)</label><input class="fi" type="text" id="addDate" placeholder="DD/MM/YYYY"></div>
   <div class="brow"><button class="btn bs" onclick="closeOv('addOv')">Cancel</button><button class="btn bp" onclick="saveExp()">Add</button></div>
 </div></div>
 <div class="ov" id="catOv"><div class="sheet"><div class="hdl"></div><h2 class="sh2" id="catTitle"></h2><div id="catBody"></div></div></div>
@@ -418,7 +419,7 @@ function shift(d){cur=Math.max(0,cur+d);render();}
 function mkSq(data,pk,cat,clickable){
   const id=cat.id,bgt=fb(id),cr=carry(data,pk,id),sp=ps(data,pk,id);
   const eff=bgt+cr,p=pct(sp,eff>0?eff:bgt),s=scCls(sp,eff>0?eff:bgt);
-  let carryHtml=cr<-0.5?`<div class="sq-carry neg">▲ ${fm(Math.abs(cr))} deficit</div>`:cr>0.5?`<div class="sq-carry pos">▼ ${fm(cr)} surplus</div>`:`<div class="sq-carry none">No carry</div>`;
+  let carryHtml=cr<-0.5?`<div class="sq-carry neg">▲ ${fm(Math.abs(cr))} <span style='color:var(--R)'>deficit</span></div>`:cr>0.5?`<div class="sq-carry pos">▼ ${fm(cr)} <span style='color:var(--G)'>surplus</span></div>`:`<div class="sq-carry none">No carry</div>`;
   const totSp=totalSpentAll(data,id),totBgt=totalBudgetAll(id,cur);
   const ca=clickable?`onclick="openCat('${id}')" `:'';
   return`<div class="sq ${s}" ${ca}>
@@ -461,7 +462,7 @@ function render(){
   let content='';
   if(tab==='snapshot'){
     const sq=tracked.map(c=>mkSq(data,pk,c,true)).join('');
-    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Overall position</div><div class="sc-val ${totSC}">${totAvail<0?'▲ Deficit ':'▼ Surplus '}${fm(Math.abs(totAvail))}</div></div><div class="scard"><div class="sc-lbl">Cumulative budget</div><div class="sc-val">${fm(totCumBgt)}</div></div></div><div class="sum-row" style="margin-top:-6px"><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div><div class="scard"><div class="sc-lbl">Cumulative spent</div><div class="sc-val">${fm(totCumSp)}</div></div></div>
+    content=`<div class="sum-row"><div class="scard"><div class="sc-lbl">Overall position</div><div class="sc-val ${totSC}">${totAvail<0?'<span style="color:var(--R)">▲ Deficit</span>':'<span style="color:var(--G)">▼ Surplus</span>'} ${fm(Math.abs(totAvail))}</div></div><div class="scard"><div class="sc-lbl">Cumulative budget</div><div class="sc-val">${fm(totCumBgt)}</div></div></div><div class="sum-row" style="margin-top:-6px"><div class="scard"><div class="sc-lbl">Spent this fn</div><div class="sc-val">${fm(totSp)}</div></div><div class="scard"><div class="sc-lbl">Cumulative spent</div><div class="sc-val">${fm(totCumSp)}</div></div></div>
     <div class="sec"><div class="sec-hd">Essential spend this fortnight</div><div class="sq-grid">${sq}</div></div>`;
   }else if(tab==='fixed'){
     const sq=fixed.map(c=>mkSq(data,pk,c,true)).join('');
@@ -850,7 +851,9 @@ async function saveEdit(){
 
 function openAdd(){
   sel=null;addMode='essentials';
-  document.getElementById('amt').value='';document.getElementById('desc').value='';
+  document.getElementById('amt').value='';
+  document.getElementById('desc').value='';
+  document.getElementById('addDate').value='';
   document.getElementById('addOv').classList.add('open');
   setAddMode('essentials');
   setTimeout(()=>document.getElementById('amt').focus(),150);
@@ -858,12 +861,26 @@ function openAdd(){
 function saveExp(){
   const amt=parseFloat(document.getElementById('amt').value);
   const desc=document.getElementById('desc').value.trim()||sel;
+  const dateInput=(document.getElementById('addDate')?.value||'').trim();
   if(!sel){alert('Pick a category');return;}
   if(!amt||amt<=0){alert('Enter a valid amount');return;}
-  const data=D(),pk=retroPeriodKey||getPK(cur);
+  // Parse date field if provided (DD/MM/YYYY)
+  let txDate=null,pk=retroPeriodKey||getPK(cur);
   const isRetro=!!retroPeriodKey;retroPeriodKey=null;
+  if(dateInput&&dateInput.includes('/')){
+    const[dd,mm,yyyy]=dateInput.split('/');
+    if(dd&&mm&&yyyy){
+      txDate=yyyy+'-'+mm.padStart(2,'0')+'-'+dd.padStart(2,'0');
+      pk=getPK(getPO(txDate)); // put in correct period for that date
+    }
+  }
+  if(!txDate){
+    // Use today's local date
+    const n=new Date();
+    txDate=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  }
+  const data=D();
   if(!data.periods[pk])data.periods[pk]={transactions:[]};
-  const txDate=isRetro?pk:new Date().toISOString().slice(0,10);
   const tx={id:Date.now(),catId:sel,amount:Math.round(amt*100)/100,description:desc,date:txDate,_ts:Date.now()};
   data.periods[pk].transactions.push(tx);
   saveLocal(data);closeOv('addOv');schedulePush();render();
