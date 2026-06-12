@@ -757,9 +757,10 @@ function render(){
   // Render fixed header into separate div
   document.getElementById('hdr-fixed').innerHTML=`<div class="hdr"><div class="hdr-top"><div class="hdr-titles"><h1>Family Budget</h1><div class="h-sub">From 3 June 2026</div></div><div class="hdr-right"><span class="bdg ${isNow?'bdg-now':'bdg-past'}">${isNow?'Current':cur<getCO()?'Past':'Future'}</span><span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span></div></div><div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G);margin-right:8px">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div><div style="display:flex;gap:8px;padding:2px 0 0"><button onclick="manualSync()" style="flex:1;padding:6px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div></div><div class="tabs"><div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div><div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div><div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div><div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div><div class="tab ${tab==='chart'?'on':''}" onclick="sw('chart')">Chart</div><div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div><div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div></div>`;
   const hdrEl=document.getElementById('hdr-fixed');
-  if(hdrEl)document.getElementById('app').style.paddingTop=hdrEl.offsetHeight+'px';
   document.getElementById('app').innerHTML=content;
   rebuildCG();
+  // Read height after paint so it's accurate
+  requestAnimationFrame(()=>{if(hdrEl)document.getElementById('app').style.paddingTop=hdrEl.offsetHeight+'px';});
 }
 
 function setAddMode(mode){
@@ -833,13 +834,22 @@ async function saveEdit(){
   render();
 }
 
-function openAdd(){
-  sel=null;addMode='essentials';
+function openAdd(preselCat){
+  const presetting=!!preselCat;
+  if(!presetting){sel=null;addMode='essentials';}
+  else{sel=preselCat;}
   document.getElementById('amt').value='';
   document.getElementById('desc').value='';
   document.getElementById('addDate').value='';
   document.getElementById('addOv').classList.add('open');
-  setAddMode('essentials');
+  const modeBar=document.getElementById('addModeBar');
+  if(modeBar)modeBar.style.display=presetting?'none':'flex';
+  if(!presetting)setAddMode('essentials');
+  else{
+    const cat=CATS.find(c=>c.id===preselCat);
+    addMode=cat&&cat.fixed?'fixed':'essentials';
+    rebuildCG();
+  }
   setTimeout(()=>document.getElementById('amt').focus(),150);
 }
 function saveExp(){
@@ -887,7 +897,7 @@ function openCat(id){
     <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">Overall: ${fm(totSp)} spent of ${fm(totBgt)} budget since Jun 3</div>
     <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Transactions</div>
     ${txHtml}
-    <button class="bw" style="margin-top:14px" onclick="closeOv('catOv');sel='${id}';openAdd()">+ Add transaction</button>
+    <button class="bw" style="margin-top:14px" onclick="closeOv('catOv');openAdd('${id}')">+ Add transaction</button>
     <button class="bw" onclick="closeOv('catOv')">Close</button>`;
   document.getElementById('catOv').classList.add('open');
 }
@@ -1049,15 +1059,15 @@ window.onload=async function(){
     if(!swActive)return;
     const dx=Math.abs(e.touches[0].clientX-swX);
     const dy=Math.abs(e.touches[0].clientY-swY);
-    // If moving more vertically than horizontally, cancel swipe tracking
-    if(dy>dx*1.5)swActive=false;
+    // Only cancel if clearly scrolling vertically (dy > 20px and dy > dx)
+    if(dy>20&&dy>dx)swActive=false;
   },{passive:true});
   document.addEventListener('touchend',e=>{
     if(!swActive)return;
     swActive=false;
     const dx=e.changedTouches[0].clientX-swX;
     const dy=e.changedTouches[0].clientY-swY;
-    if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2){
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){
       const i=tabList.indexOf(tab);
       if(dx<0&&i<tabList.length-1){tab=tabList[i+1];render();}
       else if(dx>0&&i>0){tab=tabList[i-1];render();}
