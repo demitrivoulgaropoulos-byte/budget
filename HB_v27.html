@@ -33,7 +33,7 @@ h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
 .tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:-webkit-sticky;position:sticky;top:68px;z-index:49}
 .tab{flex:1;padding:5px 1px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-radius:8px;cursor:pointer;transition:all .12s;white-space:nowrap}
 .tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
-.sum-row{position:-webkit-sticky;position:sticky;top:122px;z-index:48;background:var(--bg);display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
+.sum-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
 .scard{background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:9px 12px}
 .sc-lbl{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
 .sc-val{font-size:18px;font-weight:700;letter-spacing:-.4px}
@@ -123,6 +123,7 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
 </head>
 <body>
 <div id="hdr"></div>
+<div id="static-bar" style="background:var(--bg)"></div>
 <div id="app"></div>
 <button class="fab" onclick="openAdd()" aria-label="Add">+</button>
 <div class="ov" id="addOv"><div class="sheet">
@@ -538,7 +539,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
       ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
     </div></div>
-    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 12 Jun 2026 11:50</div>`;
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 12 Jun 2026 15:33</div>`;
   }else if(tab==='guide'){
     content=`<div class="sec">
 
@@ -615,7 +616,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
       ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
     </div></div>
-    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 12 Jun 2026 11:50</div>`;
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 12 Jun 2026 15:33</div>`;
   }else if(tab==='guide'){
     content=`<div class="sec">
 
@@ -714,7 +715,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
       ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
     </div></div>
-    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 12 Jun 2026 11:50</div>`;
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 12 Jun 2026 15:33</div>`;
   }else if(tab==='guide'){
     content=`<div class="sec">
     <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:20px">
@@ -758,7 +759,16 @@ function render(){
   document.getElementById('hdr').innerHTML=`<div class="hdr"><div class="hdr-top"><div class="hdr-titles"><h1>Family Budget</h1><div class="h-sub">From 3 June 2026</div></div><div class="hdr-right"><span class="bdg ${isNow?'bdg-now':'bdg-past'}">${isNow?'Current':cur<getCO()?'Past':'Future'}</span><span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span></div></div><div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G);margin-right:8px">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div><div style="display:flex;gap:8px;padding:2px 0 0"><button onclick="manualSync()" style="flex:1;padding:6px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div></div><div class="tabs"><div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div><div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div><div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div><div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div><div class="tab ${tab==='chart'?'on':''}" onclick="sw('chart')">Chart</div><div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div><div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div></div>`;
   const _h=document.getElementById('hdr');
   if(_h)document.documentElement.style.setProperty('--hdr-h',(_h.offsetHeight||160)+'px');
-  document.getElementById('app').innerHTML=content;
+  // Split: sum-row goes into static-bar, sec goes into app
+  const tmpDiv=document.createElement('div');
+  tmpDiv.innerHTML=content;
+  const sumRowEl=tmpDiv.querySelector('.sum-row');
+  const staticBar=document.getElementById('static-bar');
+  if(staticBar){
+    staticBar.innerHTML='';
+    if(sumRowEl)staticBar.appendChild(sumRowEl);
+  }
+  document.getElementById('app').innerHTML=tmpDiv.innerHTML;
 
 
   rebuildCG();
