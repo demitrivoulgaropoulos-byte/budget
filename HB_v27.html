@@ -758,7 +758,18 @@ function render(){
   document.getElementById('hdr').innerHTML=`<div class="hdr"><div class="hdr-top"><div class="hdr-titles"><h1>Family Budget</h1><div class="h-sub">From 3 June 2026</div></div><div class="hdr-right"><span class="bdg ${isNow?'bdg-now':'bdg-past'}">${isNow?'Current':cur<getCO()?'Past':'Future'}</span><span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span></div></div><div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G);margin-right:8px">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div><div style="display:flex;gap:8px;padding:2px 0 0"><button onclick="manualSync()" style="flex:1;padding:6px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div></div><div class="tabs"><div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div><div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div><div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div><div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div><div class="tab ${tab==='chart'?'on':''}" onclick="sw('chart')">Chart</div><div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div><div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div></div>`;
   const _h=document.getElementById('hdr');
   if(_h)document.documentElement.style.setProperty('--hdr-h',(_h.offsetHeight||160)+'px');
-  document.getElementById('app').innerHTML='<div class="tab-scroll">'+content+'</div>';
+  document.getElementById('app').innerHTML=content;
+  // Move sum-row to static zone above scroll
+  const appEl=document.getElementById('app');
+  const sumRow=appEl.querySelector('.sum-row');
+  const secEl=appEl.querySelector('.sec');
+  if(sumRow&&secEl){
+    // Wrap sec in scrollable div
+    const scroller=document.createElement('div');
+    scroller.className='tab-scroll';
+    secEl.parentNode.insertBefore(scroller,secEl);
+    scroller.appendChild(secEl);
+  }
 
   rebuildCG();
 
