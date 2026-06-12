@@ -759,8 +759,11 @@ function render(){
   const hdrEl=document.getElementById('hdr-fixed');
   document.getElementById('app').innerHTML=content;
   rebuildCG();
-  // Read height after paint so it's accurate
-  requestAnimationFrame(()=>{if(hdrEl)document.getElementById('app').style.paddingTop=hdrEl.offsetHeight+'px';});
+  // Set padding synchronously  
+  if(hdrEl){
+    const h=hdrEl.offsetHeight||130;
+    document.getElementById('app').style.paddingTop=h+'px';
+  }
 }
 
 function setAddMode(mode){
