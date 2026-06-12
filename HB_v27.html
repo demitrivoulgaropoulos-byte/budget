@@ -8,8 +8,8 @@
 :root{--bg:#F7F5F0;--sf:#FFF;--sf2:#F0EDE6;--tx:#1A1917;--tx2:#6B6760;--tx3:#9B9890;--br:rgba(0,0,0,0.08);--br2:rgba(0,0,0,0.15);--G:#1D9E75;--Gbg:#E1F5EE;--Gtx:#085041;--A:#BA7517;--Abg:#FAEEDA;--Atx:#633806;--R:#A32D2D;--Rbg:#FCEBEB;--Rtx:#501313;--B:#185FA5;--Bbg:#E6F1FB;--Btx:#042C53;--rad:13px;--rs:9px}
 @media(prefers-color-scheme:dark){:root{--bg:#1A1917;--sf:#242320;--sf2:#2C2C2A;--tx:#F1EFE8;--tx2:#9B9890;--tx3:#5A5956;--br:rgba(255,255,255,0.07);--br2:rgba(255,255,255,0.13);--Gbg:#04342C;--Gtx:#9FE1CB;--Abg:#412402;--Atx:#FAC775;--Rbg:#501313;--Rtx:#F7C1C1;--Bbg:#042C53;--Btx:#B5D4F4}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px}
-.hdr{padding:10px 16px 8px;position:-webkit-sticky;position:sticky;top:0;z-index:50;background:var(--bg)}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px;padding-top:var(--hdr-h,160px)}
+#hdr{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg)}.hdr{padding:10px 16px 8px;background:var(--bg)}
 .hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
 .hdr-titles{flex:1}
 h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
@@ -30,7 +30,7 @@ h1{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
 .pb{background:var(--sf);border:1px solid var(--br2);border-radius:8px;padding:7px 14px;font-size:14px;font-weight:700;color:var(--tx);cursor:pointer}
 .pb:active{opacity:.7}
 .plbl{font-size:13px;color:var(--tx2);flex:1;text-align:center;font-weight:500}
-.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px;position:-webkit-sticky;position:sticky;top:68px;z-index:49}
+.tabs{display:flex;background:var(--sf2);border-radius:11px;padding:3px;margin:0 16px 10px;gap:1px}
 .tab{flex:1;padding:5px 1px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-radius:8px;cursor:pointer;transition:all .12s;white-space:nowrap}
 .tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
 .sum-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;margin-bottom:10px}
@@ -122,6 +122,7 @@ textarea.fi{resize:vertical;min-height:100px;font-family:monospace;font-size:13p
 </style>
 </head>
 <body>
+<div id="hdr"></div>
 <div id="app"></div>
 <button class="fab" onclick="openAdd()" aria-label="Add">+</button>
 <div class="ov" id="addOv"><div class="sheet">
@@ -753,28 +754,10 @@ function render(){
     </div></div>`;
   }
 
-  document.getElementById('app').innerHTML=`
-    <div class="hdr">
-      <div class="hdr-top">
-        <div class="hdr-titles"><h1>Family Budget</h1><div class="h-sub">From 3 June 2026</div></div>
-        <div class="hdr-right">
-          <span class="bdg ${isNow?'bdg-now':'bdg-past'}">${isNow?'Current':cur<getCO()?'Past':'Future'}</span>
-          <span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span>
-        </div>
-      </div>
-      <div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G);margin-right:8px">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div>
-      <div style="display:flex;gap:8px;padding:2px 0 0"><button onclick="manualSync()" style="flex:1;padding:6px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div>
-    </div>
-    <div class="tabs">
-      <div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div>
-      <div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div>
-      <div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div>
-      <div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div>
-      <div class="tab ${tab==='chart'?'on':''}" onclick="sw('chart')">Chart</div>
-      <div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div>
-      <div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div>
-    </div>
-    ${content}`;
+  document.getElementById('hdr').innerHTML=`<div class="hdr"><div class="hdr-top"><div class="hdr-titles"><h1>Family Budget</h1><div class="h-sub">From 3 June 2026</div></div><div class="hdr-right"><span class="bdg ${isNow?'bdg-now':'bdg-past'}">${isNow?'Current':cur<getCO()?'Past':'Future'}</span><span class="sync-dot sync-${syncState}" id="syncStatus"><span class="dot"></span>${{no:'No sync',ok:'Synced',ing:'Syncing…',off:'Offline'}[syncState]||syncState}</span></div></div><div class="pnav"><button class="pb" onclick="shift(-1)">‹</button><span class="plbl">${getPL(cur)}</span>${cur!==getCO()?'<button class="pb" onclick="cur=getCO();render()" style="font-size:11px;padding:5px 10px;background:var(--Gbg);color:var(--Gtx);border-color:var(--G);margin-right:8px">Today</button>':''}<button class="pb" onclick="shift(1)">›</button></div><div style="display:flex;gap:8px;padding:2px 0 0"><button onclick="manualSync()" style="flex:1;padding:6px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--br2);background:var(--sf);color:var(--tx)">↻ Sync Now</button></div></div><div class="tabs"><div class="tab ${tab==='snapshot'?'on':''}" onclick="sw('snapshot')">Essentials</div><div class="tab ${tab==='fixed'?'on':''}" onclick="sw('fixed')">Fixed</div><div class="tab ${tab==='savings'?'on':''}" onclick="sw('savings')">Savings</div><div class="tab ${tab==='history'?'on':''}" onclick="sw('history')">History</div><div class="tab ${tab==='chart'?'on':''}" onclick="sw('chart')">Chart</div><div class="tab ${tab==='settings'?'on':''}" onclick="sw('settings')">Settings</div><div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div></div>`;
+  const _h=document.getElementById('hdr');
+  if(_h)document.documentElement.style.setProperty('--hdr-h',(_h.offsetHeight||160)+'px');
+  document.getElementById('app').innerHTML=content;
 
   rebuildCG();
 
@@ -1067,16 +1050,12 @@ window.onload=async function(){
   render();
   // Every 3 minutes: push local state to cloud (no pull, no merge)
   setInterval(()=>pushOnly(), 180000);
-  // Swipe: detect touch starting in top 180px (header+tabs zone, never scrolls)
+  // Swipe on #hdr - position:fixed, iOS always delivers touches to fixed elements
   const tabList=['snapshot','fixed','savings','history','chart','settings','guide'];
-  let swX=0,swY=0,swOk=false;
-  document.addEventListener('touchstart',e=>{
-    swX=e.touches[0].clientX;
-    swY=e.touches[0].clientY;
-    swOk=e.touches[0].clientY<180; // only track if started in header zone
-  },{passive:true});
-  document.addEventListener('touchend',e=>{
-    if(!swOk)return;
+  let swX=0,swY=0;
+  const hdrDiv=document.getElementById('hdr');
+  hdrDiv.addEventListener('touchstart',e=>{swX=e.touches[0].clientX;swY=e.touches[0].clientY;},{passive:true});
+  hdrDiv.addEventListener('touchend',e=>{
     const dx=e.changedTouches[0].clientX-swX;
     const dy=e.changedTouches[0].clientY-swY;
     if(Math.abs(dx)>30&&Math.abs(dx)>Math.abs(dy)){
@@ -1084,7 +1063,6 @@ window.onload=async function(){
       if(dx<0&&i<tabList.length-1){tab=tabList[i+1];render();}
       else if(dx>0&&i>0){tab=tabList[i-1];render();}
     }
-    swOk=false;
   },{passive:true});
   function attachTabSwipe(){}
 };
