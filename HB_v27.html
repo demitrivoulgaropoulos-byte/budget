@@ -409,6 +409,7 @@ function scCls(sp,bgt){if(bgt-sp<0)return'over';if((bgt-sp)/bgt<0.2)return'warn'
 
 let tab='snapshot',cur=getCO(),sel=null;
 let editTx=null,editPk=null,editSel=null;
+let addMode='essentials';
 let expandedPeriods=new Set();
 let retroPeriodKey=null;
 let selChartCat=null;
