@@ -8,7 +8,7 @@
 :root{--bg:#F7F5F0;--sf:#FFF;--sf2:#F0EDE6;--tx:#1A1917;--tx2:#6B6760;--tx3:#9B9890;--br:rgba(0,0,0,0.08);--br2:rgba(0,0,0,0.15);--G:#1D9E75;--Gbg:#E1F5EE;--Gtx:#085041;--A:#BA7517;--Abg:#FAEEDA;--Atx:#633806;--R:#A32D2D;--Rbg:#FCEBEB;--Rtx:#501313;--B:#185FA5;--Bbg:#E6F1FB;--Btx:#042C53;--rad:13px;--rs:9px}
 @media(prefers-color-scheme:dark){:root{--bg:#1A1917;--sf:#242320;--sf2:#2C2C2A;--tx:#F1EFE8;--tx2:#9B9890;--tx3:#5A5956;--br:rgba(255,255,255,0.07);--br2:rgba(255,255,255,0.13);--Gbg:#04342C;--Gtx:#9FE1CB;--Abg:#412402;--Atx:#FAC775;--Rbg:#501313;--Rtx:#F7C1C1;--Bbg:#042C53;--Btx:#B5D4F4}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px}
+html{scroll-padding-top:170px}body{background:var(--bg);color:var(--tx);font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;min-height:100vh;padding-bottom:90px}
 .hdr{padding:10px 16px 8px;position:-webkit-sticky;position:sticky;top:0;z-index:50;background:var(--bg)}
 .hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
 .hdr-titles{flex:1}
@@ -775,6 +775,14 @@ function render(){
       <div class="tab ${tab==='guide'?'on':''}" onclick="sw('guide')">Guide</div>
     </div>
     ${content}`;
+  // Measure sticky header height and add matching top padding to prevent content hiding
+  const hdr=document.querySelector('.hdr');
+  const tabs=document.querySelector('.tabs');
+  if(hdr&&tabs){
+    const offset=hdr.offsetHeight+tabs.offsetHeight;
+    const firstEl=document.querySelector('#app .sec, #app .sum-row');
+    if(firstEl)firstEl.style.paddingTop=offset+'px';
+  }
   rebuildCG();
 
 }
@@ -1083,7 +1091,7 @@ window.onload=async function(){
     swActive=false;
     const dx=e.changedTouches[0].clientX-swX;
     const dy=e.changedTouches[0].clientY-swY;
-    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){
+    if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*0.5){
       const i=tabList.indexOf(tab);
       if(dx<0&&i<tabList.length-1){tab=tabList[i+1];render();}
       else if(dx>0&&i>0){tab=tabList[i-1];render();}
