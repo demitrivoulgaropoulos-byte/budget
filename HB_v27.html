@@ -288,35 +288,44 @@ function mergeData(local,cloud){
 }
 
 async function syncNow(){
-  // LOCAL IS ALWAYS THE SOURCE OF TRUTH.
-  // On load: pull from cloud ONLY if local has no transactions (new device setup).
-  // Otherwise: push local to cloud. Never overwrite local with cloud data.
+  // MERGE sync: pull cloud, merge with local by transaction id, push merged result back.
+  // Transactions are identified by id — whichever device has the newer _ts wins.
+  // Deleted transactions carry a _deleted flag and are never resurrected.
   if(isSyncing)return;
   const cfg=getSyncCfg();
   if(!cfg.token||!cfg.gistId){setSyncStatus('no');return;}
   isSyncing=true;
   setSyncStatus('ing');
   try{
+    const cloud=await cloudGet();
     const local=loadRaw();
-    const localCount=Object.values(local.periods||{}).reduce((s,p)=>s+(p.transactions||[]).length,0);
-    if(localCount===0){
-      // Local is empty - this is a new device, pull from cloud
-      const cloud=await cloudGet();
-      if(cloud&&cloud.periods){
-        const cloudCount=Object.values(cloud.periods).reduce((s,p)=>s+(p.transactions||[]).length,0);
-        if(cloudCount>0){
-          localStorage.setItem(SK,JSON.stringify(cloud));
-          setSyncStatus('ok');
-          isSyncing=false;
-          render();
-          return;
-        }
-      }
+    let toSave=local;
+    if(cloud&&cloud.periods){
+      // Merge: union all periods, per-transaction last-write-wins by _ts
+      const merged={periods:{}};
+      const allPk=new Set([...Object.keys(local.periods||{}),...Object.keys(cloud.periods)]);
+      allPk.forEach(pk=>{
+        const lTx=(local.periods[pk]?.transactions||[]);
+        const cTx=(cloud.periods[pk]?.transactions||[]);
+        const byId={};
+        lTx.forEach(t=>{byId[t.id]=t;});
+        cTx.forEach(t=>{
+          if(!byId[t.id]||(t._ts||0)>(byId[t.id]._ts||0))byId[t.id]=t;
+        });
+        const txs=Object.values(byId).filter(t=>!t._deleted);
+        if(txs.length>0)merged.periods[pk]={transactions:txs};
+      });
+      toSave=merged;
     }
-    // Local has data OR cloud is also empty — push local to cloud
-    const ok=await cloudPut(local);
-    setSyncStatus(ok?'ok':'off');
-    lastSyncedHash=hashData(local);
+    const ok=await cloudPut(toSave);
+    if(ok){
+      localStorage.setItem(SK,JSON.stringify(toSave));
+      setSyncStatus('ok');
+      lastSyncedHash=hashData(toSave);
+      render();
+    }else{
+      setSyncStatus('off');
+    }
   }catch(e){setSyncStatus('off');}
   isSyncing=false;
 }
@@ -548,7 +557,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
       ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
     </div></div>
-    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 13 Jun 2026 02:19</div>`;
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 13 Jun 2026 03:18</div>`;
   }else if(tab==='guide'){
     content=`<div class="sec">
 
@@ -625,7 +634,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
       ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
     </div></div>
-    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 13 Jun 2026 02:19</div>`;
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 13 Jun 2026 03:18</div>`;
   }else if(tab==='guide'){
     content=`<div class="sec">
 
@@ -724,7 +733,7 @@ function render(){
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--rad);padding:12px 14px">
       ${CATS.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${c.icon} ${c.label}${c.fixed?' <span style="color:var(--tx3);font-size:10px">fixed</span>':''}</span><span style="font-weight:700">${fm(c.weekly*2)}/fn</span></div>`).join('')}
     </div></div>
-    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 13 Jun 2026 02:19</div>`;
+    <div class="sec"><button onclick="confirmReset()" style="width:100%;padding:12px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--R);background:var(--Rbg);color:var(--Rtx)">Reset to Factory</button></div><div style="text-align:center;padding:8px;font-size:10px;color:var(--tx3)">Version updated 13 Jun 2026 03:18</div>`;
   }else if(tab==='guide'){
     content=`<div class="sec">
     <div class="isec" style="background:var(--Bbg);border-radius:var(--rad);padding:14px 16px;margin-bottom:20px">
@@ -1087,6 +1096,21 @@ async function pushOnly(){
   setSyncStatus('ing');
   const ok=await cloudPut(loadRaw());
   setSyncStatus(ok?'ok':'off');
+}
+
+// ── SERVICE WORKER REGISTRATION ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/budget/sw.js').then(reg=>{
+    reg.addEventListener('updatefound',()=>{
+      const newWorker=reg.installing;
+      newWorker.addEventListener('statechange',()=>{
+        if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
+          // New version available - reload automatically
+          window.location.reload();
+        }
+      });
+    });
+  });
 }
 </script>
 </body>
